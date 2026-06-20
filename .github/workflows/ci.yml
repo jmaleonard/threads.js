@@ -1,46 +1,111 @@
 name: ci
+
 on:
-  pull_request:
   push:
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   THREADS_WORKER_INIT_TIMEOUT: 15000
 
 jobs:
-  # Full suite (incl. the Playwright browser test) on Linux across supported Node versions
-  test:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+  # Fast feedback: build + lint once before the heavier matrices run.
+  lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run lint
+
+  # Library + tooling tests across supported Node versions on Linux.
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         node_version: ['20', '22']
     steps:
       - uses: actions/checkout@v4
-      - name: Setup node
+      - name: Setup node ${{ matrix.node_version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node_version }}
           cache: npm
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Build
-        run: npm run build
-      - name: Lint
-        run: npm run lint
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run test:library
+      - run: npm run test:tooling
+
+  # Coverage gate + reporting (single canonical run).
+  coverage:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Library tests with coverage
+        run: npm run test:coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: warn
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+        # No token needed for tokenless uploads on public repos; add
+        # CODECOV_TOKEN as a repo secret for private repos / reliable uploads.
+
+  # Real browser run (Playwright + Chromium).
+  browser:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
-      - name: Library tests
-        run: npm run test:library
-      - name: Tooling tests
-        run: npm run test:tooling
-      - name: Browser tests
-        run: npm run test:browser
+      - run: npm run test:browser
 
-  # Library + tooling tests on Windows and macOS (worker path handling is platform specific)
+  # Worker path handling is platform-specific, so smoke-test Windows + macOS.
   cross-platform:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    needs: lint
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -52,18 +117,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: Build
-        run: npm run build
-      - name: Library tests
-        run: npm run test:library
-      - name: Tooling tests
-        run: npm run test:tooling
-
-  Skip:
-    if: contains(github.event.head_commit.message, '[skip ci]')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skip CI 🚫
-        run: echo skip ci
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run test:library
+      - run: npm run test:tooling

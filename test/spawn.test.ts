@@ -70,4 +70,19 @@ test("catches top-level thread errors", async t => {
   await t.throwsAsync(spawn(new Worker("./workers/top-level-throw")), undefined, "Top-level worker error")
 })
 
-test.todo("can subscribe to thread events")
+test("can subscribe to thread events", async t => {
+  const events: any[] = []
+  const helloWorld = await spawn<() => string>(new Worker("./workers/hello-world"))
+
+  Thread.events(helloWorld).subscribe(event => events.push(event))
+
+  await helloWorld()
+  await Thread.terminate(helloWorld)
+
+  // Give the termination event a tick to propagate through the observable
+  await new Promise(resolve => setTimeout(resolve, 50))
+
+  const eventTypes = events.map(event => event.type)
+  t.true(eventTypes.includes("message"), `Expected a "message" event, got: ${eventTypes.join(", ")}`)
+  t.true(eventTypes.includes("termination"), `Expected a "termination" event, got: ${eventTypes.join(", ")}`)
+})

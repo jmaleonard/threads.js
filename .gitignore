@@ -16,3 +16,5 @@ Thumbs.db
 test-browser/.dist/
 test-results/
 playwright-report/
+coverage/
+.nyc_output/
