@@ -1,6 +1,6 @@
 {
   "name": "threadsx",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "description": "Web workers & worker threads as simple as a function call",
   "license": "MIT",
   "main": "dist/index.js",
@@ -117,14 +117,22 @@
   },
   "c8": {
     "all": true,
-    "src": ["src"],
-    "include": ["src/**/*.ts"],
+    "src": [
+      "src"
+    ],
+    "include": [
+      "src/**/*.ts"
+    ],
     "exclude": [
       "src/**/*.browser.ts",
       "src/worker/bundle-entry.ts",
       "src/types/worker.ts"
     ],
-    "reporter": ["text-summary", "text", "lcov"],
+    "reporter": [
+      "text-summary",
+      "text",
+      "lcov"
+    ],
     "check-coverage": true,
     "lines": 91,
     "branches": 80,
