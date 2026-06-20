@@ -146,7 +146,17 @@ export async function spawn<Exposed extends WorkerFunction | WorkerModule<any> =
   debugSpawn("Initializing new thread")
 
   const timeout = options && options.timeout ? options.timeout : initMessageTimeout
-  const initMessage = await withTimeout(receiveInitMessage(worker), timeout, `Timeout: Did not receive an init message from worker after ${timeout}ms. Make sure the worker calls expose().`)
+
+  let initMessage: WorkerInitMessage
+  try {
+    initMessage = await withTimeout(receiveInitMessage(worker), timeout, `Timeout: Did not receive an init message from worker after ${timeout}ms. Make sure the worker calls expose().`)
+  } catch (error) {
+    // The worker failed to initialise (e.g. it threw before calling expose(),
+    // or never sent an init message). Tear it down so it does not leak a live
+    // worker handle and keep the process from exiting.
+    await Promise.resolve((worker as any).terminate?.()).catch(() => undefined)
+    throw error
+  }
   const exposed = initMessage.exposed
 
   const { termination, terminate } = createTerminator(worker)

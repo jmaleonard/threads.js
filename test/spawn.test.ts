@@ -74,13 +74,17 @@ test("can subscribe to thread events", async t => {
   const events: any[] = []
   const helloWorld = await spawn<() => string>(new Worker("./workers/hello-world"))
 
-  Thread.events(helloWorld).subscribe(event => events.push(event))
+  const subscription = Thread.events(helloWorld).subscribe(event => events.push(event))
 
   await helloWorld()
   await Thread.terminate(helloWorld)
 
   // Give the termination event a tick to propagate through the observable
   await new Promise(resolve => setTimeout(resolve, 50))
+
+  // Release the events subscription so it does not keep the worker's message
+  // port alive and prevent the test process from exiting.
+  subscription.unsubscribe()
 
   const eventTypes = events.map(event => event.type)
   t.true(eventTypes.includes("message"), `Expected a "message" event, got: ${eventTypes.join(", ")}`)
