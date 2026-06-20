@@ -14,6 +14,7 @@ export default tseslint.config(
       "test-browser/.dist/**",
       "playwright-report/**",
       "test-results/**",
+      "coverage/**",
       "test/workers/*.js"
     ]
   },
