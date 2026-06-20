@@ -49,13 +49,17 @@ async function withTimeout<T>(promise: Promise<T>, timeoutInMs: number, errorMes
   const timeout = new Promise<never>((resolve, reject) => {
     timeoutHandle = setTimeout(() => reject(Error(errorMessage)), timeoutInMs)
   })
-  const result = await Promise.race([
-    promise,
-    timeout
-  ])
-
-  clearTimeout(timeoutHandle)
-  return result
+  try {
+    return await Promise.race([
+      promise,
+      timeout
+    ])
+  } finally {
+    // Always clear the timer, even when `promise` rejects. Otherwise a pending
+    // timeout keeps the event loop alive until it fires (which on a failed
+    // spawn showed up as ava "failed to exit" on slower runners).
+    clearTimeout(timeoutHandle)
+  }
 }
 
 function receiveInitMessage(worker: WorkerType): Promise<WorkerInitMessage> {
