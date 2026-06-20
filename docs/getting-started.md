@@ -2,18 +2,18 @@
 layout: article
 title: Quick start
 permalink: /getting-started
-excerpt: Get started using threads.js – Install the package, optionally set up Webpack and TypeScript.
+excerpt: Get started using threadsx – Install the package, optionally set up Webpack and TypeScript.
 aside:
   toc: true
 ---
 
 ## Quick start
 
-This is how to spawn a simple worker managed using threads.js. The worker will hash passwords, lifting the main CPU load off the master thread.
+This is how to spawn a simple worker managed using threadsx. The worker will hash passwords, lifting the main CPU load off the master thread.
 
 ```js
 // master.js
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 
 async function main() {
   const auth = await spawn(new Worker("./workers/auth"))
@@ -30,7 +30,7 @@ main().catch(console.error)
 ```js
 // workers/auth.js - will be run in worker thread
 import sha256 from "js-sha256"
-import { expose } from "threads/worker"
+import { expose } from "threadsx/worker"
 
 expose({
   hashPassword(password, salt) {
@@ -47,9 +47,9 @@ The interesting bits in the sample code above are
 * `expose()` to declare what functionality you want your worker to expose
 * `Thread.terminate()` to kill the worker once you don't need it anymore
 
-Also note that we imported `Worker` from threads.js. This is an important detail as you would usually use the global `Worker` on the `window` in browsers or import `Worker` from `worker_threads` in node.js.
+Also note that we imported `Worker` from threadsx. This is an important detail as you would usually use the global `Worker` on the `window` in browsers or import `Worker` from `worker_threads` in node.js.
 
-Importing the `Worker` from threads.js allows us not only to run the same code in browsers and node, but the threads.js `Worker` transparently provides additional functionality, too, to make using it as easy as possible.
+Importing the `Worker` from threadsx allows us not only to run the same code in browsers and node, but the threadsx `Worker` transparently provides additional functionality, too, to make using it as easy as possible.
 
 Learn more about it on the [Basic usage](/usage) page.
 
@@ -57,117 +57,52 @@ Learn more about it on the [Basic usage](/usage) page.
 ## Installation
 
 ```
-npm install threads tiny-worker
+npm install threadsx
 ```
 
-*You only need to install the `tiny-worker` package to support node.js < 12. It's an optional dependency and used as a fallback if `worker_threads` are not available.*
+threadsx ships both ESM and CommonJS builds and requires **Node.js 20 or newer** (it uses native `worker_threads`).
 
 ## Platform setup
 
 ### Run using node.js
 
-Running code using threads.js in node works out of the box.
+Running code using threadsx in node works out of the box.
 
-Note that we wrap the native `Worker`, so `new Worker("./foo/bar")` will resolve the path relative to the module that calls it, not relative to the current working directory.
+Note that we wrap the native `Worker`, so `new Worker("./foo/bar")` will resolve the path relative to the module that calls it, not relative to the current working directory. That aligns it with the behavior when bundling the code.
 
-That aligns it with the behavior when bundling the code with webpack or parcel.
+During development you can even point a worker at a TypeScript file directly — threadsx runs it through [`tsx`](https://github.com/privatenumber/tsx) (or `ts-node`) when either is installed.
 
-### Build with webpack
+### Build with a bundler (webpack 5, Vite, esbuild, rollup)
 
-#### Webpack config
+Modern bundlers detect workers from the standard URL form, so **no extra plugin is required**:
 
-Use with the [`threads-plugin`](https://github.com/andywer/threads-plugin).
+```js
+import { spawn, Worker } from "threadsx"
 
-It will transparently detect all `new Worker("./unbundled-path")` expressions, bundles the worker code and replaces the `new Worker(...)` path with the worker bundle path, so you don't need to explicitly use the `worker-loader` or define extra entry points.
-
-```sh
-  npm install -D threads-plugin
+const worker = new Worker(new URL("./workers/auth", import.meta.url))
+const auth = await spawn(worker)
 ```
 
-Then add it to your `webpack.config.js`:
-
-```diff
-+ const ThreadsPlugin = require('threads-plugin')
-
-  module.exports = {
-    // ...
-    plugins: [
-+     new ThreadsPlugin()
-    ]
-    // ...
-  }
-```
-
-#### Node.js bundles
-
-If you are using webpack to create a bundle that will be run in node (webpack config `target: "node"`), you also need to specify that the `tiny-worker` package used for node < 12 should not be bundled:
-
-```diff
-  module.exports = {
-    // ...
-+   externals: {
-+     "tiny-worker": "tiny-worker"
-+   }
-    // ...
-}
-```
-
-Make sure that `tiny-worker` is listed in your `package.json` `dependencies` in that case.
+webpack 5, Vite, esbuild and rollup bundle the referenced worker automatically. This replaces the old `threads-plugin` flow, which is no longer needed (and is unmaintained).
 
 #### When using TypeScript
 
-Make sure the TypeScript compiler keeps the `import` / `export` statements intact, so webpack resolves them. Otherwise the `threads-plugin` won't be able to do its job.
+Make sure the TypeScript compiler keeps the `import` / `export` statements intact (for example `"module": "esnext"` on the worker entry), so the bundler can resolve `new Worker(new URL(...))`.
+
+### Making `Worker` global (Parcel and similar)
+
+If your bundler only recognizes `new Worker()` when `Worker` is the global, import `threadsx/register` once at the start of your master code:
 
 ```diff
-  module.exports = {
-    // ...
-    module: {
-      rules: [
-        {
-          test: /\.ts$/,
-          loader: "ts-loader",
-+         options: {
-+           compilerOptions: {
-+             module: "esnext"
-+           }
-+         }
-        }
-      ]
-    },
-    // ...
-  }
-```
-
-#### Electron & webpack
-
-In case you are using `electron-webpack` for your electron application and your bundle does not work, you probably need to add `threads` to `whiteListedModules`. Add this to your `webpackElectron` field in your `package.json`:
-
-```diff
-  "electronWebpack": {
-    "whiteListedModules": [
-+     "threads"
-    ]
-  }
-```
-
-
-
-### Build with parcel bundler
-
-You need to import `threads/register` once at the beginning of your application code (in the master code, not in the workers):
-
-```diff
-  import { spawn } from "threads"
-+ import "threads/register"
+  import { spawn } from "threadsx"
++ import "threadsx/register"
 
   // ...
 
   const work = await spawn(new Worker("./worker"))
 ```
 
-This registers the library's `Worker` implementation for your platform as the global `Worker`. This is necessary, since you cannot `import { Worker } from "threads"` or Parcel won't recognize `new Worker()` as a web worker anymore.
-
-Be aware that this might affect any code that tries to instantiate a normal web worker `Worker` and now instead instantiates a threads.js `Worker`. The threads.js `Worker` is just a web worker with some sugar on top, but that sugar might have unexpected side effects on third-party libraries.
+This registers the library's `Worker` implementation for your platform as the global `Worker`. Be aware that this affects any code that instantiates a plain web worker `Worker`: the threadsx `Worker` is a web worker with some sugar on top, but that sugar might have unexpected side effects on third-party libraries.
 
 Everything else should work out of the box.
 
@@ -175,7 +110,7 @@ Everything else should work out of the box.
 
 When building an Electron application you probably want to enable ASAR packaging – it's usually enabled by default. Your JavaScript files will then be packaged into an ASAR archive which can help reducing the executable size and time to launch.
 
-The problem is that you can `require()` / `import` JavaScript modules from within the ASAR archive, but you cannot spawn workers packaged in the archive as easily. In order to spawn workers, you can use the [`asarUnpack`](https://www.electron.build/configuration/configuration#configuration-asarUnpack) option to unpack the archive when the app launches. `threads.js` will automatically look for the worker in the unpacked archive directory.
+The problem is that you can `require()` / `import` JavaScript modules from within the ASAR archive, but you cannot spawn workers packaged in the archive as easily. In order to spawn workers, you can use the [`asarUnpack`](https://www.electron.build/configuration/configuration#configuration-asarUnpack) option to unpack the archive when the app launches. `threadsx` will automatically look for the worker in the unpacked archive directory.
 
 The following sample snippet shows how to set that option in your `package.json` file. You will have to use the right paths for your application's files.
 
@@ -188,7 +123,7 @@ The following sample snippet shows how to set that option in your `package.json`
 
 ## Next
 
-Learn about the details and all the other features of the threads.js API, like
+Learn about the details and all the other features of the threadsx API, like
 
 * Exposing more than one function
 * Writing stateful workers

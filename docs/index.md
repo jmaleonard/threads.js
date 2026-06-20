@@ -12,9 +12,20 @@ title: Web worker meets worker threads
     font-weight: inherit;
   }
 
-  h1 img {
-    width: 500px;
-    max-width: 100%;
+  .index-wordmark {
+    font-size: 4.5rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin: 0 0 0.5rem;
+  }
+  .index-wordmark-accent {
+    color: hsl(24, 95%, 53%);
+  }
+  .index-fork-note {
+    font-size: 0.95rem;
+    opacity: 0.75;
+    margin-top: -0.25rem;
   }
 
   section {
@@ -95,27 +106,28 @@ title: Web worker meets worker threads
 
 <section class="hero" style="position: relative">
   <div class="my-5">
-    <h1 class="text-center">
-      <a href="https://threads.js.org/">
-        <img alt="threads.js" src="/assets/logo-label.png" />
-      </a>
-    </h1>
+    <h1 class="text-center index-wordmark">threads<span class="index-wordmark-accent">x</span></h1>
 
-    <p>
+    <p class="text-center">
       Make web workers &amp; worker threads as simple as a function call.
+    </p>
+
+    <p class="text-center index-fork-note">
+      A maintained, modernized fork of <a href="https://github.com/andywer/threads.js" rel="noopener" target="_blank">threads.js</a>
+      &middot; Node 20+ &middot; ESM &amp; CommonJS
     </p>
 
     <div class="highlighter-rouge my-4">
       <div class="highlight">
-        <pre class="command-prompt highlight px-4 py-3">npm install threads</pre>
+        <pre class="command-prompt highlight px-4 py-3">npm install threadsx</pre>
       </div>
     </div>
 
     <p class="text-center mt-4">
-      <a class="button button--primary button--rounded button--xxl mt-4 mx-2" href="/getting-started">
+      <a class="button button--primary button--rounded button--xxl mt-4 mx-2" href="{{ '/getting-started' | relative_url }}">
         Getting started
       </a>
-      <a class="button button--secondary button--rounded button--xxl mt-4 mx-2" href="/usage">
+      <a class="button button--secondary button--rounded button--xxl mt-4 mx-2" href="{{ '/usage' | relative_url }}">
         Documentation
       </a>
     </p>
@@ -137,7 +149,7 @@ title: Web worker meets worker threads
   <div class="d-flex flex-column" markdown="1">
 ```js
 // master.js
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 
 const auth = await spawn(new Worker("./workers/auth"))
 const hashed = await auth.hashPassword("Super secret password", "1234")
@@ -150,7 +162,7 @@ await Thread.terminate(auth)
 ```js
 // workers/auth.js
 import sha256 from "js-sha256"
-import { expose } from "threads/worker"
+import { expose } from "threadsx/worker"
 
 expose({
   hashPassword(password, salt) {
@@ -178,7 +190,7 @@ expose({
       <div>
         <h4 class="m-0">Async functions &amp; observables</h4>
         <p>
-          Built on functional paradigms and with modern APIs in mind, threads.js makes it easy to write clear, declarative code.
+          Built on functional paradigms and with modern APIs in mind, threadsx makes it easy to write clear, declarative code.
         </p>
       </div>
     </li>
@@ -200,8 +212,8 @@ expose({
       <div>
         <h4 class="m-0">Webpack &amp; other bundlers</h4>
         <p>
-          Works great with <a href="https://webpack.js.org/" rel="nofollow noopener" target="_blank">webpack</a> – just need to add one extra plugin!<br />
-          Works with other bundlers, too.
+          Works out of the box with <a href="https://webpack.js.org/" rel="nofollow noopener" target="_blank">webpack</a> 5, Vite, esbuild and rollup via
+          <code>new Worker(new URL(…, import.meta.url))</code>.
         </p>
       </div>
     </li>
@@ -281,20 +293,9 @@ expose({
           <div class="card__header">
             <div class="logos"><i class="fab fa-node-js"></i></div>
           </div>
-          <h4>Node.js 12+</h4>
+          <h4>Node.js 20+</h4>
           <p>
             Using native <a href="https://nodejs.org/api/worker_threads.html" rel="nofollow noopener" target="_blank">worker threads</a>
-          </p>
-        </div>
-      </div>
-      <div class="card cell m-3 card-flex">
-        <div class="card__content text-center">
-          <div class="card__header">
-            <div class="logos"><i class="fab fa-node-js"></i></div>
-          </div>
-          <h4>Node.js 8 to 11</h4>
-          <p>
-            Using <a href="https://github.com/avoidwork/tiny-worker" rel="nofollow noopener" target="_blank">tiny-worker</a>
           </p>
         </div>
       </div>

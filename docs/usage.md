@@ -2,7 +2,7 @@
 layout: article
 title: Basic usage
 permalink: /usage
-excerpt: How to use the threads.js API.
+excerpt: How to use the threadsx API.
 sidebar:
   nav: sidebar
 aside:
@@ -11,11 +11,11 @@ aside:
 
 ## Basics
 
-A trivial worker example to demo the two most important functions provided by threads.js: `spawn()` and `expose()`.
+A trivial worker example to demo the two most important functions provided by threadsx: `spawn()` and `expose()`.
 
 ```js
 // master.js
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 
 async function main() {
   const add = await spawn(new Worker("./workers/add"))
@@ -31,7 +31,7 @@ main().catch(console.error)
 
 ```js
 // workers/add.js
-import { expose } from "threads/worker"
+import { expose } from "threadsx/worker"
 
 expose(function add(a, b) {
   return a + b
@@ -60,7 +60,7 @@ This is one of two kinds of workers. A function worker exposes a single function
 
 ```js
 // master.js
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 
 const fetchGithubProfile = await spawn(new Worker("./workers/fetch-github-profile"))
 const andywer = await fetchGithubProfile("andywer")
@@ -73,7 +73,7 @@ await Thread.terminate(fetchGithubProfile)
 ```js
 // workers/fetch-github-profile.js
 import fetch from "isomorphic-fetch"
-import { expose } from "threads/worker"
+import { expose } from "threadsx/worker"
 
 expose(async function fetchGithubProfile(username) {
   const response = await fetch(`https://api.github.com/users/${username}`)
@@ -87,7 +87,7 @@ This is the second kind of worker. A module worker exposes an object whose value
 
 ```js
 // master.js
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 
 const counter = await spawn(new Worker("./workers/counter"))
 await counter.increment()
@@ -101,7 +101,7 @@ await Thread.terminate(counter)
 
 ```js
 // workers/counter.js
-import { expose } from "threads/worker"
+import { expose } from "threadsx/worker"
 
 let currentCount = 0
 
@@ -126,7 +126,7 @@ Works fully transparent - the promise in the master code's call will be rejected
 
 ```js
 // master.js
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 
 const counter = await spawn(new Worker("./workers/counter"))
 
@@ -154,7 +154,7 @@ There is also a convenience function `BlobWorker.fromText()` that creates a new 
 Here is a webpack-based example, leveraging the `raw-loader` to inline the worker code. The worker code that we load using the `raw-loader` is the content of bundles that have been created by two previous webpack runs: one worker build targetting node.js, one for web browsers.
 
 ```js
-import { spawn, BlobWorker } from "threads"
+import { spawn, BlobWorker } from "threadsx"
 import MyWorkerNode from "raw-loader!../dist/worker.node/worker.js"
 import MyWorkerWeb from "raw-loader!../dist/worker.web/worker.js"
 
@@ -164,7 +164,7 @@ const worker = await spawn(BlobWorker.fromText(MyWorker))
 // Now use this worker as always
 ```
 
-Bundle this module and you will obtain a stand-alone bundle that has its worker inlined. This is particularly useful for libraries using threads.js.
+Bundle this module and you will obtain a stand-alone bundle that has its worker inlined. This is particularly useful for libraries using threadsx.
 
 ## TypeScript
 
@@ -174,7 +174,7 @@ When using TypeScript you can declare the type of a `spawn()`-ed worker:
 
 ```ts
 // master.ts
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 
 type HashFunction = (input: string) => Promise<string>
 
@@ -186,7 +186,7 @@ It's also easy to export the type from the worker module and use it when `spawn(
 
 ```ts
 // master.ts
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 import { Counter } from "./workers/counter"
 
 const counter = await spawn<Counter>(new Worker("./workers/counter"))
@@ -200,7 +200,7 @@ await Thread.terminate(counter)
 
 ```ts
 // counter.ts
-import { expose } from "threads/worker"
+import { expose } from "threadsx/worker"
 
 let currentCount = 0
 
@@ -225,7 +225,7 @@ expose(counter)
 
 You can spawn `*.ts` workers out-of-the-box without prior transpiling if <a href="https://github.com/TypeStrong/ts-node" rel="nofollow">ts-node</a> is installed.
 
-If the path passed to `new Worker()` resolves to a `*.ts` file, threads.js will check if `ts-node` is available. If so, it will create an in-memory module that wraps the actual worker module and initializes `ts-node` before running the worker code. *It is likely you will have to increase the THREADS_WORKER_INIT_TIMEOUT environment variable (milliseconds, default 10000) to account for the longer ts-node startup time if you see timeouts spawning threads.*
+If the path passed to `new Worker()` resolves to a `*.ts` file, threadsx will check if `ts-node` is available. If so, it will create an in-memory module that wraps the actual worker module and initializes `ts-node` before running the worker code. *It is likely you will have to increase the THREADS_WORKER_INIT_TIMEOUT environment variable (milliseconds, default 10000) to account for the longer ts-node startup time if you see timeouts spawning threads.*
 
 In case `ts-node` is not available, `new Worker()` will attempt to load the same file, but with a `*.js` extension. It is then in your hands to transpile the worker module before running the code.
 

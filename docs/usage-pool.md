@@ -16,7 +16,7 @@ A `Pool` allows you to create a set of workers and queue worker calls. The queue
 Use it if you have a lot of work to offload to workers and don't want to drown them in a pile of work at once, but run those tasks in a controlled way with limited concurrency.
 
 ```js
-import { spawn, Pool, Worker } from "threads"
+import { spawn, Pool, Worker } from "threadsx"
 
 const pool = Pool(() => spawn(new Worker("./workers/multiplier")), 8 /* optional size */)
 
@@ -74,7 +74,7 @@ The promise returned by `pool.completed()` will resolve once the scheduled callb
 Track a pooled task via the object that the `pool.queue()` promise resolves to. You can `await pool.queue()` to obtain the job's result. Be aware, though, that if you `await` the result directly on queueing, you will only queue another job after this one has finished. You might rather want to `pool.queue().then()` to defer handling the outcome and keep queueing tasks uninterruptedly.
 
 ```js
-import { spawn, Pool, Worker } from "threads"
+import { spawn, Pool, Worker } from "threadsx"
 
 const pool = Pool(() => spawn(new Worker("./workers/crytpo")))
 const task = pool.queue(crypto => crypto.encrypt("some-password"))
