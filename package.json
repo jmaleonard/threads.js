@@ -1,5 +1,5 @@
 {
-  "name": "threads",
+  "name": "threadsx",
   "version": "1.7.0",
   "description": "Web workers & worker threads as simple as a function call",
   "license": "MIT",
@@ -55,14 +55,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andywer/threads.js.git"
+    "url": "git+https://github.com/jmaleonard/threadsx.git"
   },
   "author": "Andy Wermke (https://github.com/andywer)",
   "bugs": {
-    "url": "https://github.com/andywer/threads.js/issues"
+    "url": "https://github.com/jmaleonard/threadsx/issues"
   },
-  "funding": "https://github.com/andywer/threads.js?sponsor=1",
-  "homepage": "https://threads.js.org",
+  "homepage": "https://github.com/jmaleonard/threadsx#readme",
   "keywords": [
     "thread",
     "worker",
