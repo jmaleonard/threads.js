@@ -49,13 +49,17 @@ async function withTimeout<T>(promise: Promise<T>, timeoutInMs: number, errorMes
   const timeout = new Promise<never>((resolve, reject) => {
     timeoutHandle = setTimeout(() => reject(Error(errorMessage)), timeoutInMs)
   })
-  const result = await Promise.race([
-    promise,
-    timeout
-  ])
-
-  clearTimeout(timeoutHandle)
-  return result
+  try {
+    return await Promise.race([
+      promise,
+      timeout
+    ])
+  } finally {
+    // Always clear the timer, even when `promise` rejects. Otherwise a pending
+    // timeout keeps the event loop alive until it fires (which on a failed
+    // spawn showed up as ava "failed to exit" on slower runners).
+    clearTimeout(timeoutHandle)
+  }
 }
 
 function receiveInitMessage(worker: WorkerType): Promise<WorkerInitMessage> {
@@ -122,8 +126,7 @@ function setPrivateThreadProps<T>(raw: T, worker: WorkerType, workerEvents: Obse
     .filter(event => event.type === WorkerEventType.internalError)
     .map(errorEvent => (errorEvent as WorkerInternalErrorEvent).error)
 
-  // tslint:disable-next-line prefer-object-spread
-  return Object.assign(raw, {
+  return Object.assign(raw as any, {
     [$errors]: workerErrors,
     [$events]: workerEvents,
     [$terminate]: terminate,
@@ -136,7 +139,7 @@ function setPrivateThreadProps<T>(raw: T, worker: WorkerType, workerEvents: Obse
  * abstraction layer to provide the transparent API and verifies that
  * the worker has initialized successfully.
  *
- * @param worker Instance of `Worker`. Either a web worker, `worker_threads` worker or `tiny-worker` worker.
+ * @param worker Instance of `Worker`. Either a web worker or a `worker_threads` worker.
  * @param [options]
  * @param [options.timeout] Init message timeout. Default: 10000 or set by environment variable.
  */
@@ -147,7 +150,17 @@ export async function spawn<Exposed extends WorkerFunction | WorkerModule<any> =
   debugSpawn("Initializing new thread")
 
   const timeout = options && options.timeout ? options.timeout : initMessageTimeout
-  const initMessage = await withTimeout(receiveInitMessage(worker), timeout, `Timeout: Did not receive an init message from worker after ${timeout}ms. Make sure the worker calls expose().`)
+
+  let initMessage: WorkerInitMessage
+  try {
+    initMessage = await withTimeout(receiveInitMessage(worker), timeout, `Timeout: Did not receive an init message from worker after ${timeout}ms. Make sure the worker calls expose().`)
+  } catch (error) {
+    // The worker failed to initialise (e.g. it threw before calling expose(),
+    // or never sent an init message). Tear it down so it does not leak a live
+    // worker handle and keep the process from exiting.
+    await Promise.resolve((worker as any).terminate?.()).catch(() => undefined)
+    throw error
+  }
   const exposed = initMessage.exposed
 
   const { termination, terminate } = createTerminator(worker)

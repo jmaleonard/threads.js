@@ -1,88 +1,61 @@
 import test from "ava"
 import * as path from "path"
-import Webpack from "webpack"
+import webpack, { Configuration, Stats } from "webpack"
 
-const browserConfig = require("./webpack.web.config")
-const serverConfig = require("./webpack.node.config")
+const browserConfig = require("./webpack.web.config") as Configuration
+const serverConfig = require("./webpack.node.config") as Configuration
 
 const stringifyWebpackError = (error: any) =>
   !error
-  ? ""
-  : typeof error.stack === "string"
-  ? error.stack
-  : typeof error.message === "string"
-  ? error.message
-  : error
+    ? ""
+    : typeof error.stack === "string"
+    ? error.stack
+    : typeof error.message === "string"
+    ? error.message
+    : String(error)
 
-async function runWebpack(config: any) {
-  return new Promise<Webpack.Stats>((resolve, reject) => {
-    Webpack(config).run((error, stats) => {
-      error ? reject(error) : resolve(stats)
+async function runWebpack(config: Configuration): Promise<Stats> {
+  return new Promise((resolve, reject) => {
+    webpack(config).run((error, stats) => {
+      if (error || !stats) {
+        reject(error ?? new Error("Webpack produced no stats"))
+      } else {
+        resolve(stats)
+      }
     })
   })
 }
 
 test("can create a browser bundle with webpack", async t => {
   const stats = await runWebpack(browserConfig)
-  t.deepEqual(stats.compilation.errors, [], stringifyWebpackError(stats.compilation.errors[0]))
+  const errors = stats.compilation.errors
+  t.deepEqual(errors, [], stringifyWebpackError(errors[0]))
 })
 
-test("can create a working server bundle with webpack", async t => {
+test("can create a server bundle with webpack", async t => {
   const stats = await runWebpack(serverConfig)
-  t.deepEqual(stats.compilation.errors, [], stringifyWebpackError(stats.compilation.errors[0]))
-
-  const bundle = require("./dist/app.node/main")
-  await bundle.test()
+  const errors = stats.compilation.errors
+  t.deepEqual(errors, [], stringifyWebpackError(errors[0]))
 })
 
-test("can inline a worker into an app bundle", async t => {
-  // Bundle browser worker
-  let stats = await runWebpack({
-    ...browserConfig,
-    entry: require.resolve("./addition-worker"),
-    output: {
-      filename: "worker.js",
-      path: path.resolve(__dirname, "dist/addition-worker.web")
-    },
-    target: "webworker"
-  })
-  t.deepEqual(stats.compilation.errors, [], stringifyWebpackError(stats.compilation.errors[0]))
+test("can run a webpack-bundled worker app on the node target", async t => {
+  t.timeout(120000)
 
-  // Bundle server worker
-  stats = await runWebpack({
+  // Build an app that spawns its pool and addition workers via webpack 5's
+  // native `new Worker(new URL("./worker", import.meta.url))` support, then run
+  // the bundle end to end to prove the bundled workers actually execute.
+  const stats = await runWebpack({
     ...serverConfig,
-    entry: require.resolve("./addition-worker"),
-    output: {
-      filename: "worker.js",
-      path: path.resolve(__dirname, "dist/addition-worker.node")
-    }
-  })
-  t.deepEqual(stats.compilation.errors, [], stringifyWebpackError(stats.compilation.errors[0]))
-
-  // Bundle browser app
-  stats = await runWebpack({
-    ...browserConfig,
-    entry: require.resolve("./app-with-inlined-worker"),
+    entry: require.resolve("./app.ts"),
     output: {
       ...serverConfig.output,
-      path: path.resolve(__dirname, "dist/app-inlined.web")
+      path: path.resolve(__dirname, "./dist/app-run.node")
     }
   })
-  t.deepEqual(stats.compilation.errors, [], stringifyWebpackError(stats.compilation.errors[0]))
+  const errors = stats.compilation.errors
+  t.deepEqual(errors, [], stringifyWebpackError(errors[0]))
 
-  // Bundle server app
-  stats = await runWebpack({
-    ...serverConfig,
-    entry: require.resolve("./app-with-inlined-worker"),
-    output: {
-      ...serverConfig.output,
-      path: path.resolve(__dirname, "dist/app-inlined.node")
-    }
-  })
-  t.deepEqual(stats.compilation.errors, [], stringifyWebpackError(stats.compilation.errors[0]))
-
-  const bundle = require("./dist/app-inlined.node/main")
-  const result = await bundle.test()
-
+  const run = require("./dist/app-run.node/main")
+  const result = await run()
   t.is(result, "test succeeded")
 })

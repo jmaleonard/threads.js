@@ -13,7 +13,6 @@ import { Thread } from "./thread"
 
 export { PoolEvent, PoolEventType, QueuedTask, Thread }
 
-// tslint:disable-next-line no-namespace
 export declare namespace Pool {
   type Event<ThreadType extends Thread = any> = PoolEvent<ThreadType>
   type EventType = PoolEventType
@@ -184,7 +183,7 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
       this.eventSubject.next({
         type: PoolEventType.taskFailed,
         taskID: task.id,
-        error,
+        error: error as Error,
         workerID
       })
     }

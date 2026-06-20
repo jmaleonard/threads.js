@@ -18,11 +18,11 @@ remote_theme: kitian616/jekyll-TeXt-theme # Jekyll Remote Theme, see https://git
 ##############################
 text_skin: orange         # "default" (default), "dark", "forest", "ocean", "chocolate", "orange"
 highlight_theme: tomorrow-night-bright  # "default" (default), "tomorrow", "tomorrow-night", "tomorrow-night-eighties", "tomorrow-night-blue", "tomorrow-night-bright"
-url     : https://threads.js.org # the base hostname & protocol for your site e.g. https://www.someone.com
-baseurl : /               # does not include hostname
-title   : threads.js
+url     : https://threadsx.jmaleonard.com # the base hostname & protocol for your site e.g. https://www.someone.com
+baseurl : ""              # served at the domain root (custom subdomain)
+title   : threadsx
 description: >            # this means to ignore newlines until "Language & timezone"
-  Make web workers & worker threads as simple as a function call – worker library for node.js, web and electron. JavaScript/TypeScript, supports webpack.
+  Make web workers & worker threads as simple as a function call – a maintained, modernized fork of threads.js for node.js and the browser. JavaScript/TypeScript, ESM & CommonJS, Node 20+.
 
 ## => Language and Timezone
 ##############################
@@ -34,9 +34,9 @@ timezone: # see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for
 ##############################
 author:
   type      : person # "person" (default), "organization"
-  name      : Andy Wermke
-  url       : https://github.com/andywer
-  avatar    : https://avatars1.githubusercontent.com/u/1842462?s=150&v=4  # path or url of avatar image (square)
+  name      : Jared Leonard
+  url       : https://github.com/jmaleonard
+  avatar    :   # path or url of avatar image (square)
   bio       :
   email     :
   facebook  : # "user_name" the last part of your profile url, e.g. https://www.facebook.com/user_name
@@ -54,8 +54,8 @@ author:
 
 ## => GitHub Repository (if the site is hosted by GitHub)
 ##############################
-repository: andywer/threads.js
-repository_tree: master
+repository: jmaleonard/threadsx
+repository_tree: modernize
 
 
 ## => Paths
@@ -166,11 +166,11 @@ search:
 ## => Analytics
 ##############################
 analytics:
-  provider: google # false (default), "google", "custom"
+  provider: false # false (default), "google", "custom"
 
   ## Google Analytics
   google:
-    tracking_id : UA-69261150-2 # Google Analytics id for the site
+    tracking_id : # Google Analytics id for the site
     anonymize_ip: true # Anonymize IP tracking for Analytics
 
 

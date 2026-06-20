@@ -8,6 +8,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["es2015"],
+    "types": ["node"],
     "outDir": "dist",
     "strict": true
   },
@@ -15,8 +16,6 @@
     "./src/index.ts",
     "./src/observable.ts",
     "./src/master/*",
-    "./src/worker/*",
-    "./types/tiny-worker.d.ts",
-    "./types/is-observable.d.ts"
+    "./src/worker/*"
   ]
 }

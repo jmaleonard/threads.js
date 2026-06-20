@@ -17,7 +17,7 @@ You can return observables in your worker. It works fully transparent - just sub
 
 ```js
 // master.js
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 
 const counter = await spawn(new Worker("./workers/counter"))
 
@@ -27,7 +27,7 @@ counter().subscribe(newCount => console.log(`Counter incremented to:`, newCount)
 ```js
 // workers/counter.js
 import { Observable } from "observable-fns"
-import { expose } from "threads/worker"
+import { expose } from "threadsx/worker"
 
 function startCounting() {
   return new Observable(observer => {
@@ -92,7 +92,7 @@ We can easily use observable subjects to stream results as they are computed.
 
 ```js
 // master.js
-import { spawn, Thread, Worker } from "threads"
+import { spawn, Thread, Worker } from "threadsx"
 
 const minmax = await spawn(new Worker("./workers/minmax"))
 
@@ -112,8 +112,8 @@ await Thread.terminate(minmax)
 
 ```js
 // minmax.js
-import { Observable, Subject } from "threads/observable"
-import { expose } from "threads/worker"
+import { Observable, Subject } from "threadsx/observable"
+import { expose } from "threadsx/worker"
 
 let max = -Infinity
 let min = Infinity

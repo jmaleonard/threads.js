@@ -1,4 +1,3 @@
-// tslint:disable no-shadowed-variable
 import { MessagePort } from "worker_threads"
 import { AbstractedWorkerAPI } from "../types/worker"
 import WorkerThreads from "../worker_threads"

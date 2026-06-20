@@ -1,15 +1,15 @@
 const path = require("path")
-const ThreadsPlugin = require("threads-plugin")
 
 module.exports = {
   context: __dirname,
   mode: "development",
   devtool: false,
-  entry: require.resolve("./app.ts"),
+  entry: require.resolve("./webpack-entry.ts"),
   output: {
-    library: "test",
-    libraryExport: "default",
-    libraryTarget: "commonjs",
+    library: {
+      type: "commonjs2",
+      export: "default"
+    },
     path: path.resolve(__dirname, "./dist/app.web")
   },
   module: {
@@ -25,11 +25,8 @@ module.exports = {
       }
     ]
   },
-  plugins: [
-    new ThreadsPlugin()
-  ],
   resolve: {
-    extensions: [".js", ".ts"]
+    extensions: [".ts", ".js"]
   },
   target: "web"
 }

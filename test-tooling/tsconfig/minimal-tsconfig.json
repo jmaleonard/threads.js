@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
-    "lib": ["es2017"],
+    // threads.js' master-side public API references DOM types (Transferable,
+    // Worker, WorkerOptions), so a consuming project needs the "dom" lib.
+    // TODO(phase-3): ship self-contained type declarations so the "dom" lib
+    // is no longer required by downstream consumers.
+    "lib": ["es2017", "dom"],
     "noEmit": true,
     "strict": true
   },

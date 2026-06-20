@@ -1,4 +1,3 @@
-import isSomeObservable from "is-observable"
 import { Observable, Subscription } from "observable-fns"
 import { deserialize, serialize } from "../common"
 import { isTransferDescriptor, TransferDescriptor } from "../transferable"
@@ -31,10 +30,29 @@ const isMasterJobCancelMessage = (thing: any): thing is MasterJobCancelMessage =
 const isMasterJobRunMessage = (thing: any): thing is MasterJobRunMessage => thing && thing.type === MasterMessageType.run
 
 /**
- * There are issues with `is-observable` not recognizing zen-observable's instances.
+ * Detects observables via the `Symbol.observable` / `@@observable` interop protocol.
+ * Inlined from the `is-observable` package (which is now ESM-only) to keep the
+ * CommonJS build working without an extra dependency.
+ */
+function isInteropObservable(thing: any): boolean {
+  if (!thing) {
+    return false
+  }
+  const observableSymbol = (Symbol as any).observable
+  if (typeof observableSymbol === "symbol" && typeof thing[observableSymbol] === "function") {
+    return thing === thing[observableSymbol]()
+  }
+  if (typeof thing["@@observable"] === "function") {
+    return thing === thing["@@observable"]()
+  }
+  return false
+}
+
+/**
+ * There are issues with interop observable detection not recognizing zen-observable's instances.
  * We are using `observable-fns`, but it's based on zen-observable, too.
  */
-const isObservable = (thing: any): thing is Observable<any> => isSomeObservable(thing) || isZenObservable(thing)
+const isObservable = (thing: any): thing is Observable<any> => isInteropObservable(thing) || isZenObservable(thing)
 
 function isZenObservable(thing: any): thing is Observable<any> {
   return thing && typeof thing === "object" && typeof thing.subscribe === "function"
@@ -105,7 +123,6 @@ function postUncaughtErrorMessage(error: Error) {
     }
     Implementation.postMessageToMaster(errorMessage)
   } catch (subError) {
-    // tslint:disable-next-line no-console
     console.error(
       "Not reporting uncaught error back to master thread as it " +
       "occured while reporting an uncaught error already." +
@@ -121,7 +138,7 @@ async function runFunction(jobUID: number, fn: WorkerFunction, args: any[]) {
   try {
     syncResult = fn(...args)
   } catch (error) {
-    return postJobErrorMessage(jobUID, error)
+    return postJobErrorMessage(jobUID, error as Error)
   }
 
   const resultType = isObservable(syncResult) ? "observable" : "promise"

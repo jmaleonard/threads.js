@@ -18,7 +18,7 @@ en: &EN
   FOLLOW_US               : "Follow us on [NAME]."
   EMAIL_ME                : "Send me an Email."
   EMAIL_US                : "Send us an Email."
-  COPYRIGHT_DATES         : "2019"
+  COPYRIGHT_DATES         : "2019–present"
 
 en-GB:
   <<: *EN

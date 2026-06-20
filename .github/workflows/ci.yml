@@ -1,81 +1,124 @@
 name: ci
+
 on:
-  pull_request:
   push:
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   THREADS_WORKER_INIT_TIMEOUT: 15000
 
 jobs:
-  # Building threads library from source
-  Build:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        node_version: ['15']
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup node
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node }}
-
-      - name: install dependencies and build
-        run: npm install
-
-      - name: Dev test
-        run: npm run test:tooling
-
-      - name: Upload artifacts
-        if: contains(matrix.os, 'ubuntu')
-        uses: actions/upload-artifact@v2
-        with:
-          path: |
-            ./bundle
-            ./dist
-            ./dist-esm
-            ./test-tooling/webpack/dist
-
-  # Testing the built files
-  Test:
-    needs: Build
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        node_version: [ '10', '12', '14' ]
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup node
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node }}
-
-      - name: install dependencies
-        run: npm install --ignore-scripts
-
-      - name: Download articats
-        uses: actions/download-artifact@v2
-
-      - name: Place built files
-        shell: bash
-        run: |
-          mkdir dist && mv artifact/dist/* ./dist
-          mkdir dist-esm && mv artifact/dist-esm/* ./dist-esm
-          mkdir bundle && mv artifact/bundle/* ./bundle
-          mkdir -p test-tooling/webpack/dist/ && mv artifact/test-tooling/webpack/dist/* ./test-tooling/webpack/dist/
-
-      - name: run the tests
-        run: npm run test:library && npm run test:puppeteer:basic && npm run test:puppeteer:webpack
-
-  Skip:
-    if: contains(github.event.head_commit.message, '[skip ci]')
+  # Fast feedback: build + lint once before the heavier matrices run.
+  lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Skip CI 🚫
-        run: echo skip ci
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run lint
+
+  # Library + tooling tests across supported Node versions on Linux.
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node_version: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node ${{ matrix.node_version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run test:library
+      - run: npm run test:tooling
+
+  # Coverage gate + reporting (single canonical run).
+  coverage:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Library tests with coverage
+        run: npm run test:coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: warn
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+        # No token needed for tokenless uploads on public repos; add
+        # CODECOV_TOKEN as a repo secret for private repos / reliable uploads.
+
+  # Real browser run (Playwright + Chromium).
+  browser:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+
+  # Worker path handling is platform-specific, so smoke-test Windows + macOS.
+  cross-platform:
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['windows-latest', 'macos-latest']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run test:library
+      - run: npm run test:tooling

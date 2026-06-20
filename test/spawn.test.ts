@@ -46,7 +46,7 @@ test("can spawn a module thread", async t => {
 
 test("thread job errors are handled", async t => {
   const fail = await spawn<() => Promise<never>>(new Worker("./workers/faulty-function"))
-  await t.throwsAsync(fail(), null, "I am supposed to fail.")
+  await t.throwsAsync(fail(), undefined, "I am supposed to fail.")
   await Thread.terminate(fail)
 })
 
@@ -56,7 +56,10 @@ test("thread transfer errors are handled", async t => {
     // test is actual for native worker_threads only
     const helloWorld = await spawn(new Worker("./workers/hello-world"))
     const badTransferObj = { fn: () => {} };
-    await t.throwsAsync(helloWorld(badTransferObj), {name: 'DataCloneError'})
+    // The rejection is a DOMException (DataCloneError), which ava's throwsAsync
+    // does not recognise as a native error, so we capture and assert manually.
+    const error: any = await helloWorld(badTransferObj).then(() => undefined, e => e)
+    t.is(error && error.name, 'DataCloneError')
     await Thread.terminate(helloWorld)
   } else {
     t.pass();
@@ -64,7 +67,26 @@ test("thread transfer errors are handled", async t => {
 })
 
 test("catches top-level thread errors", async t => {
-  await t.throwsAsync(spawn(new Worker("./workers/top-level-throw")), null, "Top-level worker error")
+  await t.throwsAsync(spawn(new Worker("./workers/top-level-throw")), undefined, "Top-level worker error")
 })
 
-test.todo("can subscribe to thread events")
+test("can subscribe to thread events", async t => {
+  const events: any[] = []
+  const helloWorld = await spawn<() => string>(new Worker("./workers/hello-world"))
+
+  const subscription = Thread.events(helloWorld).subscribe(event => events.push(event))
+
+  await helloWorld()
+  await Thread.terminate(helloWorld)
+
+  // Give the termination event a tick to propagate through the observable
+  await new Promise(resolve => setTimeout(resolve, 50))
+
+  // Release the events subscription so it does not keep the worker's message
+  // port alive and prevent the test process from exiting.
+  subscription.unsubscribe()
+
+  const eventTypes = events.map(event => event.type)
+  t.true(eventTypes.includes("message"), `Expected a "message" event, got: ${eventTypes.join(", ")}`)
+  t.true(eventTypes.includes("termination"), `Expected a "termination" event, got: ${eventTypes.join(", ")}`)
+})

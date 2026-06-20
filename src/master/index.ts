@@ -1,4 +1,3 @@
-// tslint:disable no-duplicate-imports
 import type { BlobWorker as BlobWorkerClass } from "../types/master"
 import { Worker as WorkerType } from "../types/master"
 import { getWorkerImplementation, isWorkerRuntime } from "./implementation"

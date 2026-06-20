@@ -1,5 +1,5 @@
 {
-  "name": "threads",
+  "name": "threadsx",
   "version": "1.7.0",
   "description": "Web workers & worker threads as simple as a function call",
   "license": "MIT",
@@ -13,52 +13,55 @@
     "build:es": "tsc -p tsconfig-esm.json",
     "postbuild": "npm run bundle",
     "bundle": "rollup -c -f umd --file=bundle/worker.js --name=threads --silent -- dist-esm/worker/bundle-entry.js",
-    "test": "npm run test:library && npm run test:tooling && npm run test:puppeteer:basic && npm run test:puppeteer:webpack",
-    "test:library": "cross-env TS_NODE_FILES=true ava ./test/**/*.test.ts",
-    "test:tooling": "cross-env TS_NODE_FILES=true ava ./test-tooling/**/*.test.ts",
-    "test:puppeteer:basic": "puppet-run --plugin=mocha --bundle=./test/workers/:workers/ --serve=./bundle/worker.js:/worker.js ./test/*.chromium*.ts",
-    "test:puppeteer:webpack": "puppet-run --serve ./test-tooling/webpack/dist/app.web/0.worker.js --serve ./test-tooling/webpack/dist/app.web/1.worker.js --plugin=mocha ./test-tooling/webpack/webpack.chromium.mocha.ts",
-    "posttest": "tslint --project .",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "test": "npm run lint && npm run test:library && npm run test:tooling && npm run test:browser",
+    "test:library": "ava ./test/**/*.test.ts",
+    "test:tooling": "ava ./test-tooling/**/*.test.ts",
+    "test:browser": "playwright test",
+    "test:coverage": "c8 ava ./test/**/*.test.ts",
     "prepare": "npm run build"
   },
   "exports": {
     ".": {
-      "require": "./dist/index.js",
       "types": "./dist/index.d.ts",
-      "default": "./index.mjs"
+      "module": "./dist-esm/index.js",
+      "import": "./index.mjs",
+      "require": "./dist/index.js"
     },
     "./observable": {
-      "require": "./observable.js",
-      "types": "./observable.d.ts",
-      "default": "./observable.mjs"
+      "types": "./dist/observable.d.ts",
+      "module": "./dist-esm/observable.js",
+      "import": "./observable.mjs",
+      "require": "./dist/observable.js"
     },
     "./register": {
-      "require": "./register.js",
-      "types": "./register.d.ts",
-      "default": "./register.mjs"
+      "module": "./dist-esm/master/register.js",
+      "import": "./register.mjs",
+      "require": "./dist/master/register.js"
     },
     "./worker": {
-      "require": "./worker.js",
-      "types": "./worker.d.ts",
-      "default": "./worker.mjs"
+      "types": "./dist/worker/index.d.ts",
+      "module": "./dist-esm/worker/index.js",
+      "import": "./worker.mjs",
+      "require": "./dist/worker/index.js"
     }
   },
   "sideEffects": [
     "./dist*/master/register.js",
     "./dist*/worker/index.js",
-    "./register.*js",
-    "./worker.*js"
+    "./register.mjs",
+    "./worker.mjs"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andywer/threads.js.git"
+    "url": "git+https://github.com/jmaleonard/threadsx.git"
   },
   "author": "Andy Wermke (https://github.com/andywer)",
   "bugs": {
-    "url": "https://github.com/andywer/threads.js/issues"
+    "url": "https://github.com/jmaleonard/threadsx/issues"
   },
-  "funding": "https://github.com/andywer/threads.js?sponsor=1",
-  "homepage": "https://threads.js.org",
+  "homepage": "https://threadsx.jmaleonard.com",
   "keywords": [
     "thread",
     "worker",
@@ -71,78 +74,87 @@
   ],
   "dependencies": {
     "callsites": "^3.1.0",
-    "debug": "^4.2.0",
-    "is-observable": "^2.1.0",
+    "debug": "^4.4.3",
     "observable-fns": "^0.6.1"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^16.0.0",
-    "@rollup/plugin-node-resolve": "^10.0.0",
-    "@types/chai": "^4.2.14",
-    "@types/debug": "^4.1.5",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.0",
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@types/debug": "^4.1.12",
     "@types/execa": "^2.0.0",
-    "@types/mocha": "^8.0.3",
-    "@types/node": "^14.14.5",
-    "@types/webpack": "^4.41.23",
-    "ava": "^3.13.0",
-    "chai": "^4.2.0",
-    "cross-env": "^7.0.2",
+    "@types/node": "^20.19.0",
+    "ava": "^7.0.0",
+    "c8": "^10.1.3",
+    "esbuild": "^0.25.12",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^9.1.2",
     "execa": "^4.0.3",
-    "mocha": "^8.2.0",
-    "puppet-run": "^0.11.3",
-    "puppet-run-plugin-mocha": "^0.10.0-alpha",
-    "raw-loader": "^4.0.2",
-    "rimraf": "^3.0.2",
-    "rollup": "^2.32.1",
-    "threads-plugin": "^1.3.3",
-    "tiny-worker": "^2.2.0",
-    "ts-loader": "^8.0.7",
-    "ts-node": "^9.0.0",
-    "tslint": "^6.1.3",
-    "tslint-config-prettier": "^1.18.0",
-    "typescript": "^4.2.3",
-    "wavy": "^1.0.4",
-    "webpack": "^4.44.2",
-    "worker-plugin": "^5.0.0"
-  },
-  "optionalDependencies": {
-    "tiny-worker": ">= 2"
+    "globals": "^16.5.0",
+    "prettier": "^3.8.4",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.62.0",
+    "ts-loader": "^9.6.1",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.1",
+    "webpack": "^5.107.2"
   },
   "ava": {
-    "extensions": [
-      "ts"
+    "extensions": {
+      "ts": "module"
+    },
+    "nodeArguments": [
+      "--import=tsx"
     ],
+    "workerThreads": false,
     "files": [
       "./test/**/*.test.ts",
       "./test-tooling/**/*.test.ts"
     ],
-    "require": [
-      "ts-node/register"
-    ],
     "serial": true
+  },
+  "c8": {
+    "all": true,
+    "src": ["src"],
+    "include": ["src/**/*.ts"],
+    "exclude": [
+      "src/**/*.browser.ts",
+      "src/worker/bundle-entry.ts",
+      "src/types/worker.ts"
+    ],
+    "reporter": ["text-summary", "text", "lcov"],
+    "check-coverage": true,
+    "lines": 91,
+    "branches": 80,
+    "functions": 90
   },
   "browser": {
     "callsites": false,
-    "tiny-worker": false,
+    "tsx": false,
+    "tsx/cjs": false,
     "ts-node": false,
     "ts-node/register": false,
     "worker_threads": false,
     "./dist/master/implementation.js": "./dist/master/implementation.browser.js",
     "./dist/master/implementation.node.js": false,
     "./dist/worker/implementation.js": "./dist/worker/implementation.browser.js",
-    "./dist/worker/implementation.tiny-worker.js": false,
     "./dist/worker/implementation.worker_threads.js": false,
     "./dist-esm/master/implementation.js": "./dist-esm/master/implementation.browser.js",
     "./dist-esm/master/implementation.node.js": false,
     "./dist-esm/worker/implementation.js": "./dist-esm/worker/implementation.browser.js",
-    "./dist-esm/worker/implementation.tiny-worker.js": false,
     "./dist-esm/worker/implementation.worker_threads.js": false
+  },
+  "engines": {
+    "node": ">=20"
   },
   "files": [
     "dist/**",
     "dist-esm/**",
-    "*.js",
-    "*.mjs",
-    "*.ts"
+    "index.mjs",
+    "observable.mjs",
+    "register.mjs",
+    "worker.mjs"
   ]
 }
