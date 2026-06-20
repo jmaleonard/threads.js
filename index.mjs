@@ -1,10 +1,4 @@
-import Threads from "./dist/index.js"
-
-export const registerSerializer = Threads.registerSerializer
-export const spawn = Threads.spawn
-export const BlobWorker = Threads.BlobWorker
-export const DefaultSerializer = Threads.DefaultSerializer
-export const Pool = Threads.Pool
-export const Thread = Threads.Thread
-export const Transfer = Threads.Transfer
-export const Worker = Threads.Worker
+// ESM entry for Node. Re-exports the CommonJS build (which is runtime-safe in
+// both module systems); bundlers get the tree-shakeable dist-esm/ build via the
+// "module" condition in package.json#exports.
+export * from "./dist/index.js"

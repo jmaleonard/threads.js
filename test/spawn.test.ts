@@ -46,7 +46,7 @@ test("can spawn a module thread", async t => {
 
 test("thread job errors are handled", async t => {
   const fail = await spawn<() => Promise<never>>(new Worker("./workers/faulty-function"))
-  await t.throwsAsync(fail(), null, "I am supposed to fail.")
+  await t.throwsAsync(fail(), undefined, "I am supposed to fail.")
   await Thread.terminate(fail)
 })
 
@@ -56,7 +56,10 @@ test("thread transfer errors are handled", async t => {
     // test is actual for native worker_threads only
     const helloWorld = await spawn(new Worker("./workers/hello-world"))
     const badTransferObj = { fn: () => {} };
-    await t.throwsAsync(helloWorld(badTransferObj), {name: 'DataCloneError'})
+    // The rejection is a DOMException (DataCloneError), which ava's throwsAsync
+    // does not recognise as a native error, so we capture and assert manually.
+    const error: any = await helloWorld(badTransferObj).then(() => undefined, e => e)
+    t.is(error && error.name, 'DataCloneError')
     await Thread.terminate(helloWorld)
   } else {
     t.pass();
@@ -64,7 +67,7 @@ test("thread transfer errors are handled", async t => {
 })
 
 test("catches top-level thread errors", async t => {
-  await t.throwsAsync(spawn(new Worker("./workers/top-level-throw")), null, "Top-level worker error")
+  await t.throwsAsync(spawn(new Worker("./workers/top-level-throw")), undefined, "Top-level worker error")
 })
 
 test.todo("can subscribe to thread events")

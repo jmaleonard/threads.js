@@ -44,11 +44,11 @@ export class ObservablePromise<T> extends Observable<T> implements Promise<T> {
   private rejection: Error | undefined
   private state: "fulfilled" | "pending" | "rejected" = "pending"
 
-  public readonly [Symbol.toStringTag]: "[object ObservablePromise]"
+  public readonly [Symbol.toStringTag] = "[object ObservablePromise]" as const
 
   constructor(init: Initializer<T>) {
     super((originalObserver: SubscriptionObserver<T>) => {
-      // tslint:disable-next-line no-this-assignment
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this
       const observer: SubscriptionObserver<T> = {
         ...originalObserver,
@@ -126,7 +126,7 @@ export class ObservablePromise<T> extends Observable<T> implements Promise<T> {
         try {
           resolve(onFulfilled(value))
         } catch (error) {
-          rejectionCallback(error)
+          rejectionCallback(error as Error)
         }
       }
       if (!this.initHasRun) {

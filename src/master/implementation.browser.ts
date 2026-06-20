@@ -1,5 +1,3 @@
-// tslint:disable max-classes-per-file
-
 import { ImplementationExport, ThreadsWorkerOptions } from "../types/master"
 import { getBundleURL } from "./get-bundle-url.browser"
 
@@ -33,7 +31,7 @@ function selectWorkerImplementation(): ImplementationExport {
       if (typeof url === "string" && options && options._baseURL) {
         url = new URL(url, options._baseURL)
       } else if (typeof url === "string" && !isAbsoluteURL(url) && getBundleURL().match(/^file:\/\//i)) {
-        url = new URL(url, getBundleURL().replace(/\/[^\/]+$/, "/"))
+        url = new URL(url, getBundleURL().replace(/\/[^/]+$/, "/"))
         if (options?.CORSWorkaround ?? true) {
           url = createSourceBlobURL(`importScripts(${JSON.stringify(url)});`)
         }
@@ -78,5 +76,5 @@ export function getWorkerImplementation(): ImplementationExport {
 
 export function isWorkerRuntime() {
   const isWindowContext = typeof self !== "undefined" && typeof Window !== "undefined" && self instanceof Window
-  return typeof self !== "undefined" && self.postMessage && !isWindowContext ? true : false
+  return typeof self !== "undefined" && typeof self.postMessage === "function" && !isWindowContext
 }

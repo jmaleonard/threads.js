@@ -15,7 +15,7 @@ function getBundleURL(): string {
   try {
     throw new Error
   } catch (err) {
-    const matches = ("" + err.stack).match(/(https?|file|ftp|chrome-extension|moz-extension):\/\/[^)\n]+/g)
+    const matches = ("" + (err as Error).stack).match(/(https?|file|ftp|chrome-extension|moz-extension):\/\/[^)\n]+/g)
     if (matches) {
       return getBaseURL(matches[0])
     }

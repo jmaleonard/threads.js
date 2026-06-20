@@ -1,5 +1,4 @@
 /// <reference lib="dom" />
-// tslint:disable max-classes-per-file
 
 // Cannot use `compilerOptions.esModuleInterop` and default import syntax
 // See <https://github.com/microsoft/TypeScript/issues/28009>
@@ -63,7 +62,6 @@ interface AnyFunctionThread extends PrivateThreadProps {
   (...args: any[]): ObservablePromise<any>
 }
 
-// tslint:disable-next-line no-empty-interface
 interface AnyModuleThread extends PrivateThreadProps {
   // Not specifying an index signature here as that would make `ModuleThread` incompatible
 }
@@ -73,10 +71,10 @@ export type Thread = AnyFunctionThread | AnyModuleThread
 
 export type TransferList = Transferable[]
 
-/** Worker instance. Either a web worker or a node.js Worker provided by `worker_threads` or `tiny-worker`. */
+/** Worker instance. Either a web worker or a node.js Worker provided by `worker_threads`. */
 export interface Worker extends EventTarget {
   postMessage(value: any, transferList?: TransferList): void
-    /** In nodejs 10+ return type is Promise while with tiny-worker and in browser return type is void */
+    /** In node.js the return type is a Promise, while in the browser it is void */
   terminate(callback?: (error?: Error, exitCode?: number) => void): void | Promise<number>
 }
 export interface ThreadsWorkerOptions extends WorkerOptions {

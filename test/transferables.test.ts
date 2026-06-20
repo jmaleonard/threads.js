@@ -1,5 +1,5 @@
 import test from "ava"
-import { spawn, Thread, Transfer, TransferDescriptor, Worker } from "../src/index"
+import { spawn, Thread, Transfer, Worker } from "../src/index"
 import { XorBuffer } from "./workers/arraybuffer-xor"
 
 type SpyInit<Args extends any[], OriginalReturn, NewReturn> =
@@ -16,7 +16,7 @@ function spyOn<Args extends any[], OriginalReturn, NewReturn>(
   return spy(target)
 }
 
-function replaceArrayBufferWithPlaceholder<In extends any>(obj: In, arrayBuffer: ArrayBuffer): In extends ArrayBuffer ? (In | typeof arrayBufferPlaceholder) : In {
+function replaceArrayBufferWithPlaceholder<In>(obj: In, arrayBuffer: ArrayBuffer): In extends ArrayBuffer ? (In | typeof arrayBufferPlaceholder) : In {
   if ((obj as any) === arrayBuffer) {
     return arrayBufferPlaceholder as any
   } else if (Array.isArray(obj)) {

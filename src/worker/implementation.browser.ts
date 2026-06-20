@@ -1,5 +1,4 @@
 /// <reference lib="dom" />
-// tslint:disable no-shadowed-variable
 
 import { AbstractedWorkerAPI } from "../types/worker"
 
@@ -13,7 +12,7 @@ declare const self: WorkerGlobalScope
 
 const isWorkerRuntime: AbstractedWorkerAPI["isWorkerRuntime"] = function isWorkerRuntime() {
   const isWindowContext = typeof self !== "undefined" && typeof Window !== "undefined" && self instanceof Window
-  return typeof self !== "undefined" && self.postMessage && !isWindowContext ? true : false
+  return typeof self !== "undefined" && typeof self.postMessage === "function" && !isWindowContext
 }
 
 const postMessageToMaster: AbstractedWorkerAPI["postMessageToMaster"] = function postMessageToMaster(data, transferList?) {

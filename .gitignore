@@ -12,3 +12,7 @@ test/workers/*.js
 .DS_Store
 Thumbs.db
 *.log
+
+test-browser/.dist/
+test-results/
+playwright-report/

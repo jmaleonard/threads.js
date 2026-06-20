@@ -93,7 +93,7 @@ test("can proxy a promise rejection caused by a sync throw", async t => {
 })
 
 test("can subscribe to values and completion", async t => {
-  let capturedValues: any[] = []
+  const capturedValues: any[] = []
   let capturedCompletions = 0
 
   const async = new ObservablePromise((observer) => {
@@ -118,8 +118,8 @@ test("can subscribe to values and completion", async t => {
 })
 
 test("can subscribe to errors", async t => {
-  let capturedErrorMessages: string[] = []
-  let capturedValues: any[] = []
+  const capturedErrorMessages: string[] = []
+  const capturedValues: any[] = []
   let capturedCompletions = 0
 
   const async = new ObservablePromise((observer) => {
@@ -146,8 +146,8 @@ test("can subscribe to errors", async t => {
 })
 
 test("from(Observable) works", async t => {
-  let capturedErrorMessages: string[] = []
-  let capturedValues: any[] = []
+  const capturedErrorMessages: string[] = []
+  const capturedValues: any[] = []
   let capturedCompletions = 0
 
   const async = ObservablePromise.from(new Observable((observer) => {

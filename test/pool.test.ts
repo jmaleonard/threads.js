@@ -82,6 +82,8 @@ test.serial("pool.completed() works", async t => {
     "Hello World",
     "Hello World"
   ])
+
+  await pool.terminate()
 })
 
 test.serial("pool.completed() proxies errors", async t => {
@@ -94,6 +96,8 @@ test.serial("pool.completed() proxies errors", async t => {
 
   const error = await t.throwsAsync(() => pool.completed())
   t.is(error.message, "Ooopsie")
+
+  await pool.terminate()
 })
 
 test.serial("pool.completed(true) works", async t => {
@@ -102,6 +106,8 @@ test.serial("pool.completed(true) works", async t => {
 
   await pool.completed(true)
   t.pass()
+
+  await pool.terminate()
 })
 
 test.serial("pool.settled() does not reject on task failure", async t => {
@@ -126,6 +132,8 @@ test.serial("pool.settled() does not reject on task failure", async t => {
     "Test error one",
     "Test error two"
   ])
+
+  await pool.terminate()
 })
 
 test.serial("pool.settled(true) works", async t => {
@@ -134,6 +142,8 @@ test.serial("pool.settled(true) works", async t => {
 
   await pool.settled(true)
   t.pass()
+
+  await pool.terminate()
 })
 
 test.serial("task.cancel() works", async t => {
@@ -171,4 +181,6 @@ test.serial("task.cancel() works", async t => {
       taskID: 4
     }
   ])
+
+  await pool.terminate()
 })

@@ -1,42 +1,28 @@
 import test from "ava"
-import execa from "execa"
 import * as path from "path"
 import { rollup } from "rollup"
 import config from "./rollup.config"
 
+// Verifies that threads.js (master and worker side) can be bundled with rollup
+// without resolution errors. The bundled output is exercised in a real browser
+// by the Playwright suite (see test-browser/).
 test("can be bundled using rollup", async t => {
-  t.timeout(2000000); // milliseconds
+  t.timeout(120000) // milliseconds
 
-  const appBundleP = rollup({
-     input: path.resolve(__dirname, "app.js"),
+  const appBundle = await rollup({
+    input: path.resolve(__dirname, "app.js"),
     ...config
   })
-
-  const workerBundleP = rollup({
+  const workerBundle = await rollup({
     input: path.resolve(__dirname, "worker.js"),
     ...config
   })
 
-  const appBundleWriteP = (await appBundleP).write({
-    dir: path.resolve(__dirname, "dist"),
-    format: "iife"
-  })
+  const [appOutput, workerOutput] = await Promise.all([
+    appBundle.generate({ format: "iife", name: "app" }),
+    workerBundle.generate({ format: "iife", name: "worker" })
+  ])
 
-  const workerBundleWriteP = (await workerBundleP).write({
-    dir: path.resolve(__dirname, "dist"),
-    format: "iife"
-  })
-
-  await Promise.all([appBundleWriteP, workerBundleWriteP])
-
-  if (process.platform === "win32") {
-    // Quick-fix for weird Windows issue in CI
-    return t.pass()
-  }
-
-  const result = await execa.command("puppet-run --serve ./dist/worker.js:/worker.js ./dist/app.js", {
-    cwd: __dirname,
-    stderr: process.stderr
-  })
-  t.is(result.exitCode, 0)
+  t.true(appOutput.output[0].code.length > 0)
+  t.true(workerOutput.output[0].code.length > 0)
 })

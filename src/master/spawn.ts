@@ -122,8 +122,7 @@ function setPrivateThreadProps<T>(raw: T, worker: WorkerType, workerEvents: Obse
     .filter(event => event.type === WorkerEventType.internalError)
     .map(errorEvent => (errorEvent as WorkerInternalErrorEvent).error)
 
-  // tslint:disable-next-line prefer-object-spread
-  return Object.assign(raw, {
+  return Object.assign(raw as any, {
     [$errors]: workerErrors,
     [$events]: workerEvents,
     [$terminate]: terminate,
@@ -136,7 +135,7 @@ function setPrivateThreadProps<T>(raw: T, worker: WorkerType, workerEvents: Obse
  * abstraction layer to provide the transparent API and verifies that
  * the worker has initialized successfully.
  *
- * @param worker Instance of `Worker`. Either a web worker, `worker_threads` worker or `tiny-worker` worker.
+ * @param worker Instance of `Worker`. Either a web worker or a `worker_threads` worker.
  * @param [options]
  * @param [options.timeout] Init message timeout. Default: 10000 or set by environment variable.
  */
