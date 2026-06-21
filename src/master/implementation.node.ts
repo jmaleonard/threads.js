@@ -59,6 +59,13 @@ function createTsRuntimeModule(scriptPath: string, runtime: TsRuntime) {
 }
 
 function rebaseScriptPath(scriptPath: string, ignoreRegex: RegExp) {
+  // An already-absolute path (e.g. from `new Worker(new URL("./w", import.meta.url))`,
+  // which threadsx normalizes to a filesystem path) must not be rebased onto the
+  // caller's directory — doing so would prepend it and corrupt the path.
+  if (path.isAbsolute(scriptPath)) {
+    return scriptPath
+  }
+
   const parentCallSite = getCallsites().find((callsite: CallSite) => {
     const filename = callsite.getFileName()
     return Boolean(

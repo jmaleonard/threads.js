@@ -11,6 +11,16 @@ test("can spawn and terminate a thread", async t => {
   t.pass()
 })
 
+test("can spawn a worker from a new URL() in plain node", async t => {
+  // The modern bundler-friendly form. In plain node this normalizes to an
+  // absolute path, which must not be rebased onto the caller directory.
+  const helloWorld = await spawn<() => string>(
+    new Worker(new URL("./workers/hello-world.ts", import.meta.url))
+  )
+  t.is(await helloWorld(), "Hello World")
+  await Thread.terminate(helloWorld)
+})
+
 test("can call a function thread more than once", async t => {
   const increment = await spawn<() => number>(new Worker("./workers/increment"))
   t.is(await increment(), 1)
