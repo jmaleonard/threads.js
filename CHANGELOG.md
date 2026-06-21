@@ -3,6 +3,14 @@
 All notable changes to `threadsx` are documented here. Each release is also
 published on the [releases page](https://github.com/jmaleonard/threadsx/releases).
 
+## v2.0.1
+
+Discoverability and metadata only — no functional or API changes.
+
+- Broaden npm `keywords` and `description` so the package is easier to find.
+- Add `/llms.txt` and `/llms-full.txt` plus Open Graph / Twitter Card metadata
+  (and a social preview image) to the documentation site.
+
 ## v2.0.0
 
 First release of `threadsx` — a maintained, modernized fork of
