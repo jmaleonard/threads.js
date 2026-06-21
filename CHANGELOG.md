@@ -3,6 +3,15 @@
 All notable changes to `threadsx` are documented here. Each release is also
 published on the [releases page](https://github.com/jmaleonard/threadsx/releases).
 
+## v2.0.2
+
+### 🐛 Bug fixes
+
+- Fix `new Worker(new URL("./worker", import.meta.url))` in plain Node.js. The
+  worker path resolver rebased the already-absolute URL path onto the caller's
+  directory, producing a doubled path and `MODULE_NOT_FOUND`. Bundled (webpack
+  etc.) builds were unaffected. Added a regression test for the plain-Node case.
+
 ## v2.0.1
 
 Discoverability and metadata only — no functional or API changes.

@@ -1,6 +1,6 @@
 {
   "name": "threadsx",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Make web workers & worker threads as simple as a function call. Maintained, modernized fork of threads.js — Node.js 20+, ESM & CommonJS, TypeScript, observables and thread pools.",
   "license": "MIT",
   "main": "dist/index.js",
