@@ -9,8 +9,6 @@ aside:
   toc: true
 ---
 
-# Examples
-
 Runnable, self-contained examples live in the
 [`examples/`](https://github.com/jmaleonard/threadsx/tree/main/examples) folder
 of the repository. Each one installs with `npm install threadsx` and runs with
