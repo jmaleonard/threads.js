@@ -1,7 +1,7 @@
 {
   "name": "threadsx",
   "version": "2.0.0",
-  "description": "Web workers & worker threads as simple as a function call",
+  "description": "Make web workers & worker threads as simple as a function call. Maintained, modernized fork of threads.js — Node.js 20+, ESM & CommonJS, TypeScript, observables and thread pools.",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist-esm/index.js",
@@ -63,14 +63,25 @@
   },
   "homepage": "https://threadsx.jmaleonard.com",
   "keywords": [
+    "threadsx",
+    "threads",
     "thread",
     "worker",
+    "web-worker",
+    "worker-threads",
+    "worker_threads",
+    "thread-pool",
     "pool",
     "spawn",
-    "isomorphic",
     "parallel",
+    "multithreading",
+    "concurrency",
     "observable",
-    "worker_threads"
+    "typescript",
+    "esm",
+    "isomorphic",
+    "nodejs",
+    "browser"
   ],
   "dependencies": {
     "callsites": "^3.1.0",
