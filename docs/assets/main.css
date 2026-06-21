@@ -213,8 +213,8 @@ pre.highlight code {
 }
 
 .sidebar-button {
-  background: linear-gradient(8deg, #262626 0%, #033d77 100%);
-  box-shadow: 0 0 4px #033d77;
+  background: var(--tx-ink-grad);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
   color: #ffffff;
 }
 
