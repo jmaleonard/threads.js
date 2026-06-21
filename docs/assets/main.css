@@ -244,3 +244,26 @@ pre.highlight code {
 .text-center {
   text-align: center;
 }
+
+/* The TeXt theme paints active page-nav and TOC links with its own pink accent
+   (#f92651), which the orange skin doesn't override. Force them onto the brand
+   orange so the whole site reads as one theme. */
+.page__sidebar .navigation__item--active > a,
+.page__sidebar .navigation__item--active > a:link,
+.page__sidebar .navigation__item--active > a:visited,
+.sidebar-toc .toc .active > a,
+.sidebar-toc .toc .active > a:link,
+.sidebar-toc .toc .active > a:visited,
+.toc .active > a {
+  color: var(--tx-link) !important;
+}
+
+.page__sidebar .navigation__item--active {
+  border-color: var(--tx-accent) !important;
+}
+
+.page__sidebar .navigation__item--active::before,
+.sidebar-toc .toc .active::before {
+  background-color: var(--tx-accent) !important;
+  border-color: var(--tx-accent) !important;
+}
