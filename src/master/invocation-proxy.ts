@@ -39,6 +39,13 @@ const isJobStartMessage = (data: any): data is WorkerJobStartMessage => data && 
 function createObservableForJob<ResultType>(worker: WorkerType, jobUID: number): Observable<ResultType> {
   return new Observable(observer => {
     let asyncType: "observable" | "promise" | undefined
+    let settled = false
+
+    const cleanup = () => {
+      worker.removeEventListener("message", messageHandler)
+      worker.removeEventListener("error", errorHandler)
+      worker.removeEventListener("exit", exitHandler)
+    }
 
     const messageHandler = ((event: MessageEvent) => {
       debugMessages("Message from worker:", event.data)
@@ -51,29 +58,51 @@ function createObservableForJob<ResultType>(worker: WorkerType, jobUID: number):
           if (typeof event.data.payload !== "undefined") {
             observer.next(deserialize(event.data.payload))
           }
+          settled = true
           observer.complete()
-          worker.removeEventListener("message", messageHandler)
+          cleanup()
         } else {
           if (typeof event.data.payload !== "undefined") {
             observer.next(deserialize(event.data.payload))
           }
           if (event.data.complete) {
+            settled = true
             observer.complete()
-            worker.removeEventListener("message", messageHandler)
+            cleanup()
           }
         }
       } else if (isJobErrorMessage(event.data)) {
         const error = deserialize(event.data.error as any)
-        if (asyncType === "promise" || !asyncType) {
-          observer.error(error)
-        } else {
-          observer.error(error)
-        }
-        worker.removeEventListener("message", messageHandler)
+        settled = true
+        observer.error(error)
+        cleanup()
       }
     }) as EventListener
 
+    // If the worker crashes or is terminated before the job produces a result,
+    // reject the pending job instead of leaving the promise hanging forever.
+    // See #386.
+    const errorHandler = ((event: any) => {
+      if (settled) return
+      settled = true
+      const error = event && event.data instanceof Error
+        ? event.data
+        : Error(String((event && event.data) || "Worker errored before the job completed."))
+      observer.error(error)
+      cleanup()
+    }) as EventListener
+
+    const exitHandler = ((event: any) => {
+      if (settled) return
+      settled = true
+      const exitCode = event ? event.data : undefined
+      observer.error(Error(`Worker terminated before the job completed (exit code: ${exitCode}).`))
+      cleanup()
+    }) as EventListener
+
     worker.addEventListener("message", messageHandler)
+    worker.addEventListener("error", errorHandler)
+    worker.addEventListener("exit", exitHandler)
 
     return () => {
       if (asyncType === "observable" || !asyncType) {
@@ -83,7 +112,7 @@ function createObservableForJob<ResultType>(worker: WorkerType, jobUID: number):
         }
         worker.postMessage(cancelMessage)
       }
-      worker.removeEventListener("message", messageHandler)
+      cleanup()
     }
   })
 }

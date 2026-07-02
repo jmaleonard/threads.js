@@ -100,3 +100,14 @@ test("can subscribe to thread events", async t => {
   t.true(eventTypes.includes("message"), `Expected a "message" event, got: ${eventTypes.join(", ")}`)
   t.true(eventTypes.includes("termination"), `Expected a "termination" event, got: ${eventTypes.join(", ")}`)
 })
+
+test("rejects a pending call when the worker crashes", async t => {
+  t.timeout(8000)
+  const crash = await spawn<() => Promise<void>>(new Worker("./workers/crash-on-call"))
+
+  // The worker exits (process.exit) without returning a result. Before the fix
+  // the call promise would hang forever; now it rejects.
+  const error: any = await crash().then(() => undefined, e => e)
+  t.truthy(error)
+  t.true(error instanceof Error)
+})
