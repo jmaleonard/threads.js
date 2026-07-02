@@ -24,40 +24,45 @@ Docs site: https://threadsx.jmaleonard.com (GitHub Pages, built from `main`/`doc
 4. Added `llms.txt` / `llms-full.txt`, Open Graph meta + image, examples, `/examples` docs.
 5. **Addressed upstream issues** (see below).
 
-## Open PRs (need review + merge)
+## Merged PRs (all on `main`, squash-merged, branches deleted)
 
-All branch off `main`, each with a test, each closing a mirrored fork issue.
-Local branches are pushed to `fork`.
+Each had a test and green CI. Mirrored fork issues auto-closed on merge.
+
+| PR | Fixes (upstream) |
+|----|------------------|
+| #9  | #471 falsey observable values dropped |
+| #11 | #388, #484 opt out of process.exit signal handlers (`THREADS_SKIP_SIGNAL_HANDLERS`) |
+| #14 | #316, #396, #461 pool termination hangs |
+| #16 | #429 public types force the DOM lib |
+| #18 | #386 crashed worker never rejects pending calls |
+| #20 | #473 (docs only — inherent worker behaviour, not a bug) |
+
+## Open PRs
 
 | PR | Branch | Fixes (upstream) |
 |----|--------|------------------|
-| #9  | `fix/471-falsey-observable-values` | #471 falsey observable values dropped |
-| #11 | `fix/388-signal-handler-optout`    | #388, #484 opt out of process.exit signal handlers (`THREADS_SKIP_SIGNAL_HANDLERS`) |
-| #14 | `fix/316-pool-termination`         | #316, #396, #461 pool termination hangs |
-| #16 | `fix/429-dom-lib-types`            | #429 public types force the DOM lib |
-| #18 | `fix/386-crashed-worker`           | #386 crashed worker never rejects pending calls |
-| #20 | `docs/473-sync-worker-streaming`   | #473 (docs only — inherent worker behaviour, not a bug) |
-
-**Merge caveat:** several PRs touch the same files (`src/master/invocation-proxy.ts`,
-`src/master/pool.ts`, `src/master/implementation.node.ts`), so they will conflict
-with each other. Merge them **one at a time** and resolve the small conflicts, or
-rebase them into a single integration branch. Re-run `npm test` after each merge.
+| #31 | `fix/typescript-esm-types` | #417 nameable `Pool()` return type (code); #462 declaration resolution under NodeNext (regression test); #434 TS workers under ESM (docs) |
 
 ## Issues filed on the fork
 
-- Mirrored (open, one per PR): #8, #10, #12, #13, #15, #17, #19.
-- Already fixed by the modernization — filed and **closed** as resolved (for
-  discoverability): #21–#30 (upstream #496, #452, #345, #387, #466, #381, #483,
-  #422, #326, #412).
+- Mirrored PR issues **#8, #10, #12, #13, #15, #17** auto-closed by the merged PRs.
+- **#19** (docs mirror of #473) and **#5** (npm publishing epic) closed as resolved.
+- Already fixed by the modernization — filed and **closed** for discoverability:
+  #21–#30 (upstream #496, #452, #345, #387, #466, #381, #483, #422, #326, #412).
+- **Open epics #1–#4** (ESM dual-package / worker-resolution / test-coverage /
+  dependency-hygiene) — partly done; each has a progress comment listing the
+  remaining sub-tasks.
 
 ## Suggested next steps
 
-1. Watch CI on the 6 open PRs; merge them (sequentially, per the caveat above).
-2. Cut a `2.0.3`/`2.1.0` release once the fixes are merged (bump + GitHub Release).
-3. Remaining upstream issues not yet addressed are mostly **feature requests**
+1. Merge #31 once CI is green.
+2. Cut a `2.0.3`/`2.1.0` release — the 6 merged fixes (+ #31) are not published yet.
+3. Chip away at the open epics #1–#4 (see their progress comments), e.g. the small
+   wins: add a `types` condition to the `./register` export (#1), Dependabot config (#4).
+4. Remaining upstream issues not yet addressed are mostly **feature requests**
    (shared memory, async generators, worker-to-worker, Deno/Bun, pin-to-worker)
    and **docs/questions** — triage as desired.
-4. Growth levers still pending (human-only): submit to context7, post the
+5. Growth levers still pending (human-only): submit to context7, post the
    Show HN / dev.to drafts, watch upstream issue `andywer/threads.js#497`.
 
 ## How to resume on this machine
