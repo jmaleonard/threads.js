@@ -1,3 +1,5 @@
+import { Transferable } from "../transferable"
+
 type UnsubscribeFn = () => void
 
 export interface AbstractedWorkerAPI {

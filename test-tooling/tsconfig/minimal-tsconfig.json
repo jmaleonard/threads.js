@@ -1,10 +1,9 @@
 {
   "compilerOptions": {
-    // threads.js' master-side public API references DOM types (Transferable,
-    // Worker, WorkerOptions), so a consuming project needs the "dom" lib.
-    // TODO(phase-3): ship self-contained type declarations so the "dom" lib
-    // is no longer required by downstream consumers.
-    "lib": ["es2017", "dom"],
+    // threadsx ships self-contained type declarations, so a consuming project
+    // that only targets Node.js does not need the "dom" lib enabled. This
+    // config deliberately omits "dom" to guard against a regression (#429).
+    "lib": ["es2017"],
     "noEmit": true,
     "strict": true
   },

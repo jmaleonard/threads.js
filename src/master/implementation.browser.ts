@@ -60,8 +60,8 @@ function selectWorkerImplementation(): ImplementationExport {
   }
 
   return {
-    blob: BlobWorker,
-    default: WebWorker
+    blob: BlobWorker as any,
+    default: WebWorker as any
   }
 }
 
