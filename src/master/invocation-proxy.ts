@@ -54,7 +54,7 @@ function createObservableForJob<ResultType>(worker: WorkerType, jobUID: number):
           observer.complete()
           worker.removeEventListener("message", messageHandler)
         } else {
-          if (event.data.payload) {
+          if (typeof event.data.payload !== "undefined") {
             observer.next(deserialize(event.data.payload))
           }
           if (event.data.complete) {
