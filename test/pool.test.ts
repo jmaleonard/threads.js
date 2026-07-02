@@ -184,3 +184,29 @@ test.serial("task.cancel() works", async t => {
 
   await pool.terminate()
 })
+
+test.serial("completed() resolves after terminate()", async t => {
+  t.timeout(8000)
+  const pool = Pool(() => spawn(new Worker("./workers/hello-world")), 1)
+
+  // completed() is pending: with no queued tasks there is no drain event, so it
+  // only settles once the pool is terminated.
+  const completedPromise = pool.completed()
+  await pool.terminate(true)
+
+  // Before the fix this promise would hang forever after terminate().
+  await completedPromise
+  t.pass()
+})
+
+test.serial("terminate() resolves when a worker fails to initialize", async t => {
+  t.timeout(8000)
+  const pool = Pool(() => spawn(new Worker("./workers/slow-init"), { timeout: 300 }), 1)
+
+  // Swallow the pool-wide init error so it is not an unhandled rejection.
+  pool.events().subscribe({ error: () => undefined })
+
+  // Before the fix terminate() would hang on the rejected worker init promise.
+  await pool.terminate(true)
+  t.pass()
+})

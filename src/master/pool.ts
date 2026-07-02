@@ -268,10 +268,15 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
     await new Promise<void>((resolve, reject) => {
       const subscription = this.eventObservable.subscribe({
         next(event) {
-          if (event.type === PoolEventType.taskQueueDrained) {
+          if (event.type === PoolEventType.taskQueueDrained || event.type === PoolEventType.terminated) {
             subscription.unsubscribe()
             resolve(void 0)
           }
+        },
+        complete() {
+          // The pool was terminated while we were waiting; resolve instead of hanging.
+          subscription.unsubscribe()
+          resolve(void 0)
         },
         error: reject     // make a pool-wide error reject the completed() result promise
       })
@@ -289,13 +294,18 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
     const earlyExitPromise = new Promise<Error[]>((resolve, reject) => {
       const subscription = this.eventObservable.subscribe({
         next(event) {
-          if (event.type === PoolEventType.taskQueueDrained) {
+          if (event.type === PoolEventType.taskQueueDrained || event.type === PoolEventType.terminated) {
             subscription.unsubscribe()
             resolve(settlementPromise)
           } else if (event.type === PoolEventType.taskFailed) {
             subscription.unsubscribe()
             reject(event.error)
           }
+        },
+        complete() {
+          // The pool was terminated while we were waiting; resolve instead of hanging.
+          subscription.unsubscribe()
+          resolve(settlementPromise)
         },
         error: reject     // make a pool-wide error reject the completed() result promise
       })
@@ -379,7 +389,16 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
     })
     this.eventSubject.complete()
     await Promise.all(
-      this.workers.map(async worker => Thread.terminate(await worker.init))
+      this.workers.map(async worker => {
+        try {
+          await Thread.terminate(await worker.init)
+        } catch (error) {
+          // The worker never finished initializing (e.g. it hit the init
+          // timeout), so `worker.init` rejected and there is no thread to
+          // terminate here — spawn() already tore down the underlying worker.
+          this.debug("Worker did not initialize; nothing to terminate:", error)
+        }
+      })
     )
   }
 }
