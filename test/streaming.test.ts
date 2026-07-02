@@ -1,6 +1,19 @@
 import test from "ava"
 import { spawn, Thread, Worker } from "../src/index"
 
+test("propagates falsey values emitted by an observable worker", async t => {
+  const captured: any[] = []
+
+  const emitFalseyValues = await spawn<() => any>(new Worker("./workers/falsey-values"))
+  await new Promise<void>((resolve, reject) => {
+    emitFalseyValues().subscribe(value => captured.push(value), reject, resolve)
+  })
+  await Thread.terminate(emitFalseyValues)
+
+  // 0, false, "" and null are falsey but must still reach the subscriber.
+  t.deepEqual(captured, [0, false, "", null, 1])
+})
+
 test("can use worker returning an observable subject", async t => {
   const captured: Array<{ min: number, max: number }> = []
 
