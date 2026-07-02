@@ -409,9 +409,11 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
 function PoolConstructor<ThreadType extends Thread>(
   spawnWorker: () => Promise<ThreadType>,
   optionsOrSize?: number | PoolOptions
-) {
+): Pool<ThreadType> {
   // The function exists only so we don't need to use `new` to create a pool (we still can, though).
   // If the Pool is a class or not is an implementation detail that should not concern the user.
+  // The explicit `Pool<ThreadType>` return type keeps the private `WorkerPool` class out of the
+  // public type surface, so consumers can name/re-export the pool type (#417).
   return new WorkerPool(spawnWorker, optionsOrSize)
 }
 
