@@ -175,3 +175,15 @@ Set it to `DEBUG=threads:*` to enable all the library's debug logging. To run it
 ```
 DEBUG=threads:* npm test
 ```
+
+
+## Signal handlers
+
+By default threadsx installs `SIGINT` and `SIGTERM` handlers that terminate its
+workers and call `process.exit()`. If your application manages its own graceful
+shutdown, set `THREADS_SKIP_SIGNAL_HANDLERS=1` to opt out, and terminate threads
+yourself (e.g. `await Thread.terminate(thread)` / `await pool.terminate()`).
+
+```
+THREADS_SKIP_SIGNAL_HANDLERS=1 node app.js
+```

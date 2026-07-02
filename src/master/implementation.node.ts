@@ -18,6 +18,17 @@ let detectedTsRuntime: TsRuntime | null | undefined
 export const defaultPoolSize = cpus().length
 
 /**
+ * Whether the application opted out of threadsx installing SIGINT/SIGTERM
+ * handlers (which call `process.exit()`), via `THREADS_SKIP_SIGNAL_HANDLERS`.
+ */
+function signalHandlersDisabled(): boolean {
+  const value = typeof process !== "undefined" && process.env
+    ? process.env.THREADS_SKIP_SIGNAL_HANDLERS
+    : undefined
+  return value === "1" || value === "true"
+}
+
+/**
  * Detects an available TypeScript runtime so `.ts`/`.tsx` worker files can be
  * spawned directly during development. Prefers `tsx`, falls back to `ts-node`.
  */
@@ -162,8 +173,14 @@ function initWorkerThreadsWorker(): ImplementationExport {
   }
 
   // Take care to not leave orphaned processes behind. See #147.
-  process.on("SIGINT", () => terminateWorkersAndMaster())
-  process.on("SIGTERM", () => terminateWorkersAndMaster())
+  //
+  // These handlers call process.exit(), which hijacks the host application's
+  // own shutdown. Applications that manage their own graceful shutdown can opt
+  // out by setting THREADS_SKIP_SIGNAL_HANDLERS. See upstream #388 / #484.
+  if (!signalHandlersDisabled()) {
+    process.on("SIGINT", () => terminateWorkersAndMaster())
+    process.on("SIGTERM", () => terminateWorkersAndMaster())
+  }
 
   class BlobWorker extends Worker {
     constructor(blob: Uint8Array, options?: ThreadsWorkerOptions) {
