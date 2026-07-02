@@ -1,11 +1,32 @@
-/// <reference lib="dom" />
-
 // Cannot use `compilerOptions.esModuleInterop` and default import syntax
 // See <https://github.com/microsoft/TypeScript/issues/28009>
 import { Observable } from "observable-fns"
 import { ObservablePromise } from "../observable-promise"
 import { $errors, $events, $terminate, $worker } from "../symbols"
-import { TransferDescriptor } from "../transferable"
+import { Transferable, TransferDescriptor } from "../transferable"
+
+// Minimal, module-local structural stand-ins for the handful of DOM types the
+// public API references. Defining them here (instead of `/// <reference lib="dom" />`)
+// means consumers no longer have to enable the "dom" lib to type-check against
+// threadsx. Being module-scoped, these do not clash with the real DOM types
+// when a consuming project does have the "dom" lib enabled. See #429.
+interface EventTarget {
+  addEventListener(type: string, listener: any, options?: any): void
+  removeEventListener(type: string, listener: any, options?: any): void
+  dispatchEvent(event: any): boolean
+}
+interface WorkerOptions {
+  type?: "classic" | "module"
+  credentials?: "omit" | "same-origin" | "include"
+  name?: string
+}
+interface Blob {
+  readonly size: number
+  readonly type: string
+  arrayBuffer(): Promise<ArrayBuffer>
+  slice(start?: number, end?: number, contentType?: string): Blob
+  text(): Promise<string>
+}
 
 interface ObservableLikeSubscription {
   unsubscribe(): any

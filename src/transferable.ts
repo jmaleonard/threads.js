@@ -1,5 +1,12 @@
 import { $transferable } from "./symbols"
 
+// A transferable object (ArrayBuffer, MessagePort, ImageBitmap, …). Defined
+// structurally as an object rather than referencing the DOM `Transferable`
+// type, so consumers do not need the "dom" lib enabled to use threadsx (#429).
+// This matches the library's runtime check (`isTransferable`), which only
+// verifies that the value is an object.
+export type Transferable = object
+
 export interface TransferDescriptor<T = any> {
   [$transferable]: true
   send: T

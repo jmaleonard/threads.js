@@ -9,7 +9,7 @@ import DebugLogger from "debug"
 import { multicast, Observable } from "observable-fns"
 import { deserialize, serialize } from "../common"
 import { ObservablePromise } from "../observable-promise"
-import { isTransferDescriptor } from "../transferable"
+import { isTransferDescriptor, Transferable } from "../transferable"
 import {
   ModuleMethods,
   ModuleProxy,
