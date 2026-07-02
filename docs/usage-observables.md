@@ -139,3 +139,38 @@ expose(minmax)
 ```
 
 And there we go! A simple worker that keeps track of the minimum and maximum value passed to it, yielding observable updates we can subscribe to. The updated values will be streamed as they happen.
+
+
+## Streaming from a synchronous worker
+
+Values you emit from a worker are only delivered to the main thread when the
+worker's event loop gets a turn. If your worker does a long **synchronous**
+computation and calls `observer.next()` in a tight loop without ever awaiting,
+the worker never yields, so all the values arrive in one batch when the
+computation finishes — not incrementally.
+
+To stream progress from CPU-bound work, yield periodically so the worker can
+flush its outgoing messages:
+
+```js
+import { Observable } from "observable-fns"
+import { expose } from "threadsx/worker"
+
+const tick = () => new Promise(resolve => setImmediate(resolve))
+
+expose(function train() {
+  return new Observable(observer => {
+    ;(async () => {
+      for (let epoch = 0; epoch < epochs; epoch++) {
+        doOneEpochOfWork()      // synchronous, CPU-bound
+        observer.next(epoch)
+        await tick()            // yield so the update is delivered now
+      }
+      observer.complete()
+    })()
+  })
+})
+```
+
+This is a property of the worker never yielding, not of threadsx specifically —
+the same applies to raw `worker_threads` / Web Workers.
