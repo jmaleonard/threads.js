@@ -1,0 +1,15 @@
+{
+  // ts-loader picks up the nearest tsconfig. These webpack fixtures live outside
+  // the library's `rootDir` (./src), so they get their own config that extends the
+  // root but scopes compilation to this directory. `module: esnext` matches the
+  // ts-loader option in the webpack configs.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "rootDir": ".",
+    "outDir": "./dist/tsc"
+  },
+  "include": [
+    "./*.ts"
+  ]
+}
