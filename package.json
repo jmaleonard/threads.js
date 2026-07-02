@@ -96,14 +96,12 @@
     "@rollup/plugin-commonjs": "^29.0.3",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@types/debug": "^4.1.12",
-    "@types/execa": "^2.0.0",
     "@types/node": "^20.19.0",
     "ava": "^7.0.0",
     "c8": "^10.1.3",
     "esbuild": "^0.25.12",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^9.1.2",
-    "execa": "^4.0.3",
     "globals": "^16.5.0",
     "prettier": "^3.8.4",
     "rimraf": "^6.0.1",
@@ -174,5 +172,8 @@
     "dist/**",
     "dist-esm/**",
     "esm/**"
-  ]
+  ],
+  "overrides": {
+    "js-yaml": "^4.1.0"
+  }
 }

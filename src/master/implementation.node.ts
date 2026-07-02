@@ -1,5 +1,9 @@
 /// <reference lib="dom" />
 
+// NOTE: `callsites` is intentionally pinned to ^3. v4+ is ESM-only and would
+// break the CommonJS (dist/) build. Do not bump it to v4 without moving the
+// package to ESM-first output. (See .github/dependabot.yml, which also ignores
+// its major updates.)
 import getCallsites, { CallSite } from "callsites"
 import { cpus } from 'os'
 import * as path from "path"

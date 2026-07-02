@@ -1,11 +1,11 @@
 import test from "ava"
-import execa from "execa"
 import { fileURLToPath } from "url"
+import { run } from "./lib/exec"
 
 const probe = fileURLToPath(new URL("./fixtures/signal-handlers-probe.ts", import.meta.url))
 
 async function sigintListenerCount(env: Record<string, string>): Promise<number> {
-  const { stdout } = await execa("node", ["--import", "tsx", probe], {
+  const { stdout } = await run("node", ["--import", "tsx", probe], {
     env: { ...process.env, ...env }
   })
   return Number(stdout.trim())
