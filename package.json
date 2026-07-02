@@ -6,13 +6,14 @@
   "main": "dist/index.js",
   "module": "dist-esm/index.js",
   "scripts": {
-    "clean": "rimraf dist/ dist-esm/",
+    "clean": "rimraf dist/ dist-esm/ esm/",
     "dev": "npm run clean && tsc -p tsconfig.json --watch",
     "build": "npm run clean && npm run build:cjs && npm run build:es",
     "build:cjs": "tsc -p tsconfig.json",
     "build:es": "tsc -p tsconfig-esm.json",
-    "postbuild": "npm run bundle",
+    "postbuild": "npm run bundle && npm run bundle:entries",
     "bundle": "rollup -c -f umd --file=bundle/worker.js --name=threads --silent -- dist-esm/worker/bundle-entry.js",
+    "bundle:entries": "rollup -c rollup.entries.config.js --silent",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "npm run lint && npm run test:library && npm run test:tooling && npm run test:browser",
@@ -26,32 +27,33 @@
     ".": {
       "types": "./dist/index.d.ts",
       "module": "./dist-esm/index.js",
-      "import": "./index.mjs",
+      "import": "./esm/index.mjs",
       "require": "./dist/index.js"
     },
     "./observable": {
       "types": "./dist/observable.d.ts",
       "module": "./dist-esm/observable.js",
-      "import": "./observable.mjs",
+      "import": "./esm/observable.mjs",
       "require": "./dist/observable.js"
     },
     "./register": {
+      "types": "./dist/master/register.d.ts",
       "module": "./dist-esm/master/register.js",
-      "import": "./register.mjs",
+      "import": "./esm/master/register.mjs",
       "require": "./dist/master/register.js"
     },
     "./worker": {
       "types": "./dist/worker/index.d.ts",
       "module": "./dist-esm/worker/index.js",
-      "import": "./worker.mjs",
+      "import": "./esm/worker/index.mjs",
       "require": "./dist/worker/index.js"
     }
   },
   "sideEffects": [
     "./dist*/master/register.js",
     "./dist*/worker/index.js",
-    "./register.mjs",
-    "./worker.mjs"
+    "./esm/master/register.mjs",
+    "./esm/worker/index.mjs"
   ],
   "repository": {
     "type": "git",
@@ -171,9 +173,6 @@
   "files": [
     "dist/**",
     "dist-esm/**",
-    "index.mjs",
-    "observable.mjs",
-    "register.mjs",
-    "worker.mjs"
+    "esm/**"
   ]
 }

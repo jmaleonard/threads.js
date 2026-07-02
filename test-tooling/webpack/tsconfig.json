@@ -7,7 +7,8 @@
   "compilerOptions": {
     "module": "esnext",
     "rootDir": ".",
-    "outDir": "./dist/tsc"
+    "outDir": "./dist/tsc",
+    "declaration": false
   },
   "include": [
     "./*.ts"

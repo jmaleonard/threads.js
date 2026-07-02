@@ -8,6 +8,7 @@ export default tseslint.config(
     ignores: [
       "dist/**",
       "dist-esm/**",
+      "esm/**",
       "bundle/**",
       "docs/**",
       "test-tooling/**/dist/**",
