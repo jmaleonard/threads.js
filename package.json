@@ -147,8 +147,8 @@
       "lcov"
     ],
     "check-coverage": true,
-    "lines": 91,
-    "branches": 80,
+    "lines": 92,
+    "branches": 82,
     "functions": 90
   },
   "browser": {
