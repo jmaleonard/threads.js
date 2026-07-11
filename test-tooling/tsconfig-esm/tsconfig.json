@@ -1,0 +1,18 @@
+{
+  // Consuming project using modern ESM resolution ("type": "module" + NodeNext).
+  // Declaration emit is intentionally enabled so that leaking a non-exported type
+  // into threadsx's public API surface fails the build (guards #417). NodeNext
+  // resolution also forces type lookup through the package `exports` map (#462).
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["es2018"],
+    "strict": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./dist"
+  },
+  "include": [
+    "./consumer.ts"
+  ]
+}

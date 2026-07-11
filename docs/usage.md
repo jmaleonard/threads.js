@@ -223,11 +223,41 @@ expose(counter)
 
 ### TypeScript workers in node.js
 
-You can spawn `*.ts` workers out-of-the-box without prior transpiling if <a href="https://github.com/TypeStrong/ts-node" rel="nofollow">ts-node</a> is installed.
+You can spawn `*.ts` / `*.tsx` workers directly during development, without transpiling them first, as long as a TypeScript runtime is installed. threadsx prefers [`tsx`](https://github.com/privatenumber/tsx) and falls back to [`ts-node`](https://github.com/TypeStrong/ts-node):
 
-If the path passed to `new Worker()` resolves to a `*.ts` file, threadsx will check if `ts-node` is available. If so, it will create an in-memory module that wraps the actual worker module and initializes `ts-node` before running the worker code. *It is likely you will have to increase the THREADS_WORKER_INIT_TIMEOUT environment variable (milliseconds, default 10000) to account for the longer ts-node startup time if you see timeouts spawning threads.*
+```bash
+npm install --save-dev tsx
+```
 
-In case `ts-node` is not available, `new Worker()` will attempt to load the same file, but with a `*.js` extension. It is then in your hands to transpile the worker module before running the code.
+When the path passed to `new Worker()` resolves to a `*.ts` file, threadsx wraps the worker in a small in-memory module that registers the TypeScript runtime before loading your worker code. *If you see timeouts spawning threads, increase the `THREADS_WORKER_INIT_TIMEOUT` environment variable (milliseconds, default 10000) to account for the runtime's startup time.*
+
+If no TypeScript runtime is available, `new Worker()` falls back to loading the same file with a `*.js` extension — it is then up to you to transpile the worker module beforehand.
+
+#### ESM projects (`"type": "module"`)
+
+TypeScript workers work the same way in an ESM project. Point the worker at the source file — the modern `new URL(..., import.meta.url)` form is recommended so the path resolves the same in Node and in bundlers:
+
+```ts
+// master.ts (or master.mts) — package.json has "type": "module"
+import { spawn, Thread, Worker } from "threadsx"
+import type { API } from "./worker"
+
+const api = await spawn<API>(new Worker(new URL("./worker.ts", import.meta.url)))
+console.log(await api.greet("world"))
+await Thread.terminate(api)
+```
+
+```ts
+// worker.ts
+import { expose } from "threadsx/worker"
+
+const api = { greet: (name: string) => `hello, ${name}` }
+export type API = typeof api
+
+expose(api)
+```
+
+threadsx transpiles the worker through `tsx` (or `ts-node`) inside a CommonJS wrapper, so a `*.ts` worker loads correctly even when your project sets `"type": "module"` — you won't hit the `ERR_REQUIRE_ESM` error that a bare `ts-node/register` loader runs into ([#434](https://github.com/andywer/threads.js/issues/434)). Run your app with `tsx` (or `node --import tsx`) as usual.
 
 ### TypeScript workers in webpack
 
