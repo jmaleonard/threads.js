@@ -1,15 +1,19 @@
 {
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "declaration": true,
     "esModuleInterop": true,
     "target": "es2015",
     "module": "commonjs",
     "moduleResolution": "node",
+    // `node` (node10) resolution still functions in TS6 but is deprecated ahead of
+    // TS7. Silencing keeps our CJS-first, extensionless-import layout; migrating to
+    // node16/nodenext would force explicit `.js` extensions across the source tree.
+    "ignoreDeprecations": "6.0",
     "lib": ["es2015"],
     "types": ["node"],
     "outDir": "dist",
+    "rootDir": "./src",
     "strict": true
   },
   "include": [

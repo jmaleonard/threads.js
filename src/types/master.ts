@@ -10,7 +10,10 @@ import { Transferable, TransferDescriptor } from "../transferable"
 // means consumers no longer have to enable the "dom" lib to type-check against
 // threadsx. Being module-scoped, these do not clash with the real DOM types
 // when a consuming project does have the "dom" lib enabled. See #429.
-interface EventTarget {
+// A `declare class` (rather than an interface) so the ambient `WorkerImplementation`
+// class below can `extends EventTarget` without pulling in the "dom" lib. Being
+// module-scoped, it neither leaks to nor clashes with the real global DOM types.
+declare class EventTarget {
   addEventListener(type: string, listener: any, options?: any): void
   removeEventListener(type: string, listener: any, options?: any): void
   dispatchEvent(event: any): boolean
@@ -19,6 +22,12 @@ interface WorkerOptions {
   type?: "classic" | "module"
   credentials?: "omit" | "same-origin" | "include"
   name?: string
+}
+// Structural stand-in for the global `URL` (used by `new Worker(new URL(...))`),
+// so the public API type-checks without the "dom" lib or @types/node.
+interface URL {
+  readonly href: string
+  toString(): string
 }
 interface Blob {
   readonly size: number

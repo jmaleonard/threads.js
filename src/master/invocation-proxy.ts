@@ -8,6 +8,7 @@
 import DebugLogger from "debug"
 import { multicast, Observable } from "observable-fns"
 import { deserialize, serialize } from "../common"
+import { isDataCloneError, ThreadCloneError } from "../errors"
 import { ObservablePromise } from "../observable-promise"
 import { isTransferDescriptor, Transferable } from "../transferable"
 import {
@@ -160,6 +161,15 @@ export function createProxyFunction<Args extends any[], ReturnType>(worker: Work
     try {
       worker.postMessage(runMessage, transferables)
     } catch (error) {
+      if (isDataCloneError(error)) {
+        const cloneError = new ThreadCloneError(
+          `Cannot send arguments to the worker thread: a value is not structured-cloneable. ` +
+          `Functions, class instances and other non-serializable values cannot be passed to a thread. ` +
+          `Original error: ${(error as Error).message}`,
+          error
+        )
+        return ObservablePromise.from(Promise.reject(cloneError))
+      }
       return ObservablePromise.from(Promise.reject(error))
     }
 

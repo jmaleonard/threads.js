@@ -66,10 +66,12 @@ test("thread transfer errors are handled", async t => {
     // test is actual for native worker_threads only
     const helloWorld = await spawn(new Worker("./workers/hello-world"))
     const badTransferObj = { fn: () => {} };
-    // The rejection is a DOMException (DataCloneError), which ava's throwsAsync
-    // does not recognise as a native error, so we capture and assert manually.
+    // The underlying failure is a DOMException (DataCloneError); threadsx wraps it
+    // in a ThreadCloneError with an actionable message, preserving the original as
+    // `.cause`.
     const error: any = await helloWorld(badTransferObj).then(() => undefined, e => e)
-    t.is(error && error.name, 'DataCloneError')
+    t.is(error && error.name, 'ThreadCloneError')
+    t.is(error && error.cause && error.cause.name, 'DataCloneError')
     await Thread.terminate(helloWorld)
   } else {
     t.pass();

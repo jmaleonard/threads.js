@@ -1,4 +1,5 @@
 export { registerSerializer } from "./common"
+export { ThreadCloneError } from "./errors"
 export * from "./master/index"
 export { expose } from "./worker/index"
 export { DefaultSerializer, JsonSerializable, Serializer, SerializerImplementation } from "./serializers"

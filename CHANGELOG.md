@@ -3,6 +3,55 @@
 All notable changes to `threadsx` are documented here. Each release is also
 published on the [releases page](https://github.com/jmaleonard/threadsx/releases).
 
+## v2.1.0
+
+Bug-fix and hardening release addressing a batch of long-standing upstream
+issues, plus a modernization pass. No breaking API changes.
+
+### ✨ Improvements
+
+- **Opt out of the `process.exit` signal handlers** via the
+  `THREADS_SKIP_SIGNAL_HANDLERS` environment variable, for apps that manage
+  their own shutdown (upstream #388, #484).
+- **Self-contained type declarations** — consuming projects no longer need the
+  `"dom"` lib enabled to type-check against threadsx (upstream #429).
+- **True ESM on the `import` condition.** The package now ships genuine,
+  Node-loadable ESM (`esm/`) instead of re-exporting the CommonJS build, while
+  bundlers keep using the tree-shakeable `dist-esm/` via the `module` condition.
+  Added the missing `types` condition to the `./register` subpath (upstream #462).
+- **Nameable `Pool()` return type** — the value returned by `Pool()` no longer
+  leaks a private class, so consumers can name and re-export the pool type
+  without declaration-emit errors (upstream #417).
+- **`ThreadCloneError`** — passing a non-cloneable value (e.g. a function) to a
+  thread now rejects with an actionable, catchable error that preserves the
+  original `DataCloneError` as `.cause`, instead of a cryptic `DOMException`.
+- Upgraded the toolchain to **TypeScript 6.0**.
+
+### 🐛 Bug fixes
+
+- Falsey observable values (`0`, `false`, `""`) emitted from a worker are no
+  longer dropped (upstream #471).
+- Robust **pool termination**: `completed()` resolves after `terminate()`, and a
+  pool whose workers fail to initialize no longer hangs (upstream #316, #396, #461).
+- A **crashed or exited worker** now rejects its pending calls instead of leaving
+  the promises hanging forever (upstream #386).
+
+### 📚 Documentation
+
+- Document spawning **TypeScript workers under ESM** (`"type": "module"`): threadsx
+  transpiles `*.ts` workers through `tsx`/`ts-node` in a CommonJS wrapper, so they
+  load without the `ERR_REQUIRE_ESM` error a bare loader hits (upstream #434).
+- Explain incremental streaming from a **synchronous worker** (yield to flush) —
+  inherent worker behaviour, not a bug (upstream #473).
+
+### 🧰 Internal
+
+- Serialization property/fuzz tests and unit tests for the new error types;
+  tightened the c8 coverage gates.
+- Removed the `execa` / `@types/execa` dev dependencies (tests now use Node's
+  `child_process`); resolved the moderate `js-yaml` advisory; added a Dependabot
+  config; documented the deliberate `callsites@^3` pin.
+
 ## v2.0.2
 
 ### 🐛 Bug fixes

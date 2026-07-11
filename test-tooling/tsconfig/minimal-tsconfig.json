@@ -3,7 +3,7 @@
     // threadsx ships self-contained type declarations, so a consuming project
     // that only targets Node.js does not need the "dom" lib enabled. This
     // config deliberately omits "dom" to guard against a regression (#429).
-    "lib": ["es2017"],
+    "lib": ["es2018"],
     "noEmit": true,
     "strict": true
   },

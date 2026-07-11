@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      # Batch routine dev-tooling bumps into a single PR to reduce noise.
+      dev-dependencies:
+        dependency-type: "development"
+    ignore:
+      # callsites v4+ is ESM-only and would break the CommonJS build.
+      # See the note in src/master/implementation.node.ts.
+      - dependency-name: "callsites"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
