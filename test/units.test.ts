@@ -85,6 +85,28 @@ test("register installs the threads Worker as a global", async t => {
 
 // --- allSettled ponyfill ----------------------------------------------------
 
+test("node-require resolves modules and directories without webpack", async t => {
+  const { getModuleDirname, getNodeRequire, isWebpackBundle } = await import("../src/node-require")
+  t.false(isWebpackBundle())
+  t.is(typeof getNodeRequire().resolve("typescript"), "string")
+  t.is(typeof getModuleDirname(), "string")
+})
+
+test("node-require honours the webpack escape hatch", async t => {
+  const { getNodeRequire, isWebpackBundle } = await import("../src/node-require")
+  const { createRequire } = await import("module")
+  const globals = globalThis as any
+  const realRequire = createRequire(import.meta.url)
+
+  globals.__non_webpack_require__ = realRequire
+  try {
+    t.true(isWebpackBundle())
+    t.is(getNodeRequire(), realRequire)
+  } finally {
+    delete globals.__non_webpack_require__
+  }
+})
+
 test("allSettled() reports both fulfilled and rejected results", async t => {
   const results = await allSettled([
     Promise.resolve("ok"),

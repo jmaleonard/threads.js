@@ -342,6 +342,15 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
     if (this.initErrors.length > 0) {
       throw this.initErrors[0]
     }
+    // Check the queue limit before taskCompletion() below subscribes to the
+    // pool events — throwing after would leak that subscription.
+    if (this.taskQueue.length >= maxQueuedJobs) {
+      throw Error(
+        "Maximum number of pool tasks queued. Refusing to queue another one.\n" +
+        "This usually happens for one of two reasons: We are either at peak " +
+        "workload right now or some tasks just won't finish, thus blocking the pool."
+      )
+    }
 
     const taskID = this.nextTaskID++
     const taskCompletion = this.taskCompletion(taskID)
@@ -364,14 +373,6 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
         })
       },
       then: taskCompletion.then.bind(taskCompletion)
-    }
-
-    if (this.taskQueue.length >= maxQueuedJobs) {
-      throw Error(
-        "Maximum number of pool tasks queued. Refusing to queue another one.\n" +
-        "This usually happens for one of two reasons: We are either at peak " +
-        "workload right now or some tasks just won't finish, thus blocking the pool."
-      )
     }
 
     this.debug(`Queueing task #${task.id}...`)
