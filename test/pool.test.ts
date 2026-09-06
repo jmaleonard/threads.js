@@ -185,6 +185,41 @@ test.serial("task.cancel() works", async t => {
   await pool.terminate()
 })
 
+test.serial("queue() refuses tasks beyond maxQueuedJobs", async t => {
+  const spawnHelloWorld = () => spawn(new Worker("./workers/hello-world"))
+  const pool = Pool(spawnHelloWorld, { size: 1, maxQueuedJobs: 1 })
+
+  // Task 1 is dequeued for running immediately, task 2 fills the queue slot,
+  // task 3 must be refused.
+  pool.queue(helloWorld => helloWorld())
+  pool.queue(helloWorld => helloWorld())
+  t.throws(() => pool.queue(helloWorld => helloWorld()), { message: /Maximum number of pool tasks queued/ })
+
+  await pool.completed()
+  await pool.terminate()
+})
+
+test.serial("queue() throws after terminate()", async t => {
+  const spawnHelloWorld = () => spawn(new Worker("./workers/hello-world"))
+  const pool = Pool(spawnHelloWorld, 1)
+
+  await pool.terminate()
+  t.throws(() => pool.queue(helloWorld => helloWorld()), { message: /after terminate/ })
+})
+
+test.serial("queue() throws after the pool workers failed to initialize", async t => {
+  t.timeout(8000)
+  const pool = Pool(() => spawn(new Worker("./workers/top-level-throw")), 1)
+
+  // Wait for the failed init to surface as a pool-wide error event.
+  await new Promise(resolve => {
+    pool.events().subscribe({ error: resolve })
+  })
+
+  t.throws(() => pool.queue(worker => (worker as any)()), { message: /Top-level worker error/ })
+  await pool.terminate(true)
+})
+
 test.serial("a canceled task's promise rejects instead of hanging", async t => {
   const spawnHelloWorld = () => spawn(new Worker("./workers/hello-world"))
   const pool = Pool(spawnHelloWorld, 1)

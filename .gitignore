@@ -19,4 +19,6 @@ test-browser/.dist/
 test-results/
 playwright-report/
 coverage/
+coverage-browser/
+coverage-merged/
 .nyc_output/

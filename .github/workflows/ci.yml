@@ -53,7 +53,9 @@ jobs:
       - run: npm run test:library
       - run: npm run test:tooling
 
-  # Coverage gate + reporting (single canonical run).
+  # Coverage gate + reporting (single canonical run). Merges the node (c8) and
+  # browser (Playwright + istanbul) coverage so the browser-only source files
+  # count toward the totals.
   coverage:
     needs: lint
     runs-on: ubuntu-latest
@@ -67,19 +69,21 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
-      - name: Library tests with coverage
-        run: npm run test:coverage
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Library, browser and merged coverage
+        run: npm run test:coverage:merged
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-lcov
-          path: coverage/lcov.info
+          path: coverage-merged/lcov.info
           if-no-files-found: warn
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: ./coverage/lcov.info
+          files: ./coverage-merged/lcov.info
           fail_ci_if_error: false
         # No token needed for tokenless uploads on public repos; add
         # CODECOV_TOKEN as a repo secret for private repos / reliable uploads.

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "declaration": false,
     "module": "esnext",
-    "outDir": "dist-esm"
+    "outDir": "dist-esm",
+    "sourceMap": true
   }
 }
