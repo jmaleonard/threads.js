@@ -8,13 +8,13 @@ import getCallsites, { CallSite } from "callsites"
 import { cpus } from 'os'
 import * as path from "path"
 import { fileURLToPath } from "url";
+import { getModuleDirname, getNodeRequire, isWebpackBundle } from "../node-require"
 import {
   ImplementationExport,
   ThreadsWorkerOptions,
   WorkerImplementation
 } from "../types/master"
-
-declare const __non_webpack_require__: typeof require
+import getWorkerThreads from "../worker_threads"
 
 type TsRuntime = "tsx" | "ts-node"
 let detectedTsRuntime: TsRuntime | null | undefined
@@ -37,7 +37,7 @@ function signalHandlersDisabled(): boolean {
  * spawned directly during development. Prefers `tsx`, falls back to `ts-node`.
  */
 function detectTsRuntime(): TsRuntime | null {
-  if (typeof __non_webpack_require__ === "function") {
+  if (isWebpackBundle()) {
     // Webpack build: => No TS runtime required or possible
     return null
   }
@@ -48,7 +48,7 @@ function detectTsRuntime(): TsRuntime | null {
   detectedTsRuntime = null
   for (const candidate of ["tsx", "ts-node"] as TsRuntime[]) {
     try {
-      eval("require").resolve(candidate)
+      getNodeRequire().resolve(candidate)
       detectedTsRuntime = candidate
       break
     } catch (error) {
@@ -103,22 +103,20 @@ function rebaseScriptPath(scriptPath: string, ignoreRegex: RegExp) {
 
 function resolveScriptPath(scriptPath: string, baseURL?: string | undefined) {
   const makeRelative = (filePath: string) => {
-    // eval() hack is also webpack-related
-    return path.isAbsolute(filePath) ? filePath : path.join(baseURL || eval("__dirname"), filePath)
+    return path.isAbsolute(filePath) ? filePath : path.join(baseURL || getModuleDirname(), filePath)
   }
 
-  const workerFilePath = typeof __non_webpack_require__ === "function"
-    ? __non_webpack_require__.resolve(makeRelative(scriptPath))
-    : eval("require").resolve(makeRelative(rebaseScriptPath(scriptPath, /[/\\]worker_threads[/\\]/)))
+  // In a webpack bundle, walking the call stack is useless (every caller lives
+  // inside the bundle), so relative paths resolve without rebasing.
+  const workerFilePath = isWebpackBundle()
+    ? getNodeRequire().resolve(makeRelative(scriptPath))
+    : getNodeRequire().resolve(makeRelative(rebaseScriptPath(scriptPath, /[/\\]worker_threads[/\\]/)))
 
   return workerFilePath
 }
 
 function initWorkerThreadsWorker(): ImplementationExport {
-  // Webpack hack
-  const NativeWorker = typeof __non_webpack_require__ === "function"
-    ? __non_webpack_require__("worker_threads").Worker
-    : eval("require")("worker_threads").Worker
+  const NativeWorker: any = getWorkerThreads().Worker
 
   let allWorkers: Array<typeof NativeWorker> = []
 
@@ -216,9 +214,5 @@ export function getWorkerImplementation(): ImplementationExport {
 }
 
 export function isWorkerRuntime() {
-  // Webpack hack
-  const isMainThread = typeof __non_webpack_require__ === "function"
-    ? __non_webpack_require__("worker_threads").isMainThread
-    : eval("require")("worker_threads").isMainThread
-  return !isMainThread
+  return !getWorkerThreads().isMainThread
 }

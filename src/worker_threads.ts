@@ -1,27 +1,12 @@
-// Webpack hack
+import * as WorkerThreadsModule from "worker_threads"
 
-declare function __non_webpack_require__(module: string): any
+// `worker_threads` is a stable, always-present part of every Node.js version
+// this package supports (>=20), so it is imported statically. Browser bundles
+// never load this module: the package.json "browser" field maps both this
+// file's importers and "worker_threads" itself to `false`.
 
-// FIXME
-type MessagePort = any
+type WorkerThreadsInterface = typeof WorkerThreadsModule
 
-interface WorkerThreadsModule {
-  MessagePort: typeof MessagePort
-  isMainThread: boolean
-  parentPort: MessagePort
-}
-
-let implementation: WorkerThreadsModule | undefined
-
-function selectImplementation(): WorkerThreadsModule {
-  return typeof __non_webpack_require__ === "function"
-    ? __non_webpack_require__("worker_threads")
-    : eval("require")("worker_threads")
-}
-
-export default function getImplementation(): WorkerThreadsModule {
-  if (!implementation) {
-    implementation = selectImplementation()
-  }
-  return implementation
+export default function getImplementation(): WorkerThreadsInterface {
+  return WorkerThreadsModule
 }

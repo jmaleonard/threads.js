@@ -238,6 +238,12 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
         } else if (event.type === PoolEventType.taskFailed && event.taskID === taskID) {
           eventSubscription.unsubscribe()
           reject(event.error)
+        } else if (event.type === PoolEventType.taskCanceled && event.taskID === taskID) {
+          // Without this branch a canceled task would keep its event
+          // subscription alive for the pool's whole lifetime and its promise
+          // would never settle.
+          eventSubscription.unsubscribe()
+          reject(Error("Task has been canceled."))
         } else if (event.type === PoolEventType.terminated) {
           eventSubscription.unsubscribe()
           reject(Error("Pool has been terminated before task was run."))
@@ -258,10 +264,12 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
     })
 
     if (this.initErrors.length > 0) {
+      failureSubscription.unsubscribe()
       return Promise.reject(this.initErrors[0])
     }
     if (allowResolvingImmediately && this.taskQueue.length === 0) {
       await allSettled(getCurrentlyRunningTasks())
+      failureSubscription.unsubscribe()
       return taskFailures
     }
 
