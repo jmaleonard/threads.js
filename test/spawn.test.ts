@@ -113,3 +113,35 @@ test("rejects a pending call when the worker crashes", async t => {
   t.truthy(error)
   t.true(error instanceof Error)
 })
+
+test("completes Thread.events when the worker exits on its own", async t => {
+  t.timeout(8000)
+  const events: any[] = []
+  let completed = false
+
+  const crash = await spawn<() => Promise<void>>(new Worker("./workers/crash-on-call"))
+  Thread.events(crash).subscribe({
+    next: event => events.push(event),
+    complete: () => { completed = true }
+  })
+
+  // The worker exits without Thread.terminate() ever being called. The events
+  // observable must still emit a termination event and complete, detaching its
+  // worker listeners (before the fix they would stay attached forever).
+  await crash().catch(() => undefined)
+  await new Promise(resolve => setTimeout(resolve, 100))
+
+  t.true(events.some(event => event.type === "termination"))
+  t.true(completed)
+})
+
+test("terminates the worker when the init message is malformed", async t => {
+  t.timeout(8000)
+  // The worker posts an init message with an unknown expose() type. spawn()
+  // must reject AND tear the worker down — a leaked worker would keep the test
+  // process alive and trip ava's "failed to exit" detection.
+  await t.throwsAsync(
+    spawn(new Worker("./workers/bad-init")),
+    { message: /unexpected type/ }
+  )
+})

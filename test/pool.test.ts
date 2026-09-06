@@ -185,6 +185,26 @@ test.serial("task.cancel() works", async t => {
   await pool.terminate()
 })
 
+test.serial("a canceled task's promise rejects instead of hanging", async t => {
+  const spawnHelloWorld = () => spawn(new Worker("./workers/hello-world"))
+  const pool = Pool(spawnHelloWorld, 1)
+
+  const tasks: QueuedTask<any, any>[] = []
+  for (let i = 0; i < 2; i++) {
+    tasks.push(pool.queue(helloWorld => helloWorld()))
+  }
+  tasks[1].cancel()
+
+  // Before the fix, a canceled task's promise never settled and its pool event
+  // subscription stayed alive for the pool's whole lifetime.
+  const error: any = await Promise.resolve(tasks[1]).then(() => undefined, e => e)
+  t.truthy(error)
+  t.regex(error.message, /canceled/)
+
+  await pool.completed()
+  await pool.terminate()
+})
+
 test.serial("completed() resolves after terminate()", async t => {
   t.timeout(8000)
   const pool = Pool(() => spawn(new Worker("./workers/hello-world")), 1)

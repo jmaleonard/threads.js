@@ -95,18 +95,35 @@ function createEventObservable(worker: WorkerType, workerTermination: Promise<an
       }
       observer.next(workerEvent)
     }) as EventListener
-    worker.addEventListener("message", messageHandler)
-    worker.addEventListener("unhandledrejection", rejectionHandler)
+    let finished = false
 
-    workerTermination.then(() => {
+    const removeListeners = () => {
+      worker.removeEventListener("message", messageHandler)
+      worker.removeEventListener("unhandledrejection", rejectionHandler)
+      worker.removeEventListener("exit", exitHandler)
+    }
+    const finish = () => {
+      if (finished) return
+      finished = true
       const terminationEvent: WorkerTerminationEvent = {
         type: WorkerEventType.termination
       }
-      worker.removeEventListener("message", messageHandler)
-      worker.removeEventListener("unhandledrejection", rejectionHandler)
+      removeListeners()
       observer.next(terminationEvent)
       observer.complete()
-    })
+    }
+    // A worker can also go away without Thread.terminate() being called (crash,
+    // process.exit() in the worker). Complete the observable and detach the
+    // listeners in that case, too, instead of leaving them behind forever.
+    const exitHandler = (() => finish()) as EventListener
+
+    worker.addEventListener("message", messageHandler)
+    worker.addEventListener("unhandledrejection", rejectionHandler)
+    worker.addEventListener("exit", exitHandler)
+
+    workerTermination.then(finish)
+
+    return removeListeners
   })
 }
 
@@ -174,6 +191,8 @@ export async function spawn<Exposed extends WorkerFunction | WorkerModule<any> =
     return setPrivateThreadProps(proxy, worker, events, terminate) as ExposedToThreadType<Exposed>
   } else {
     const type = (exposed as WorkerInitMessage["exposed"]).type
+    // Same teardown as a failed init: don't leak a live worker handle.
+    await Promise.resolve((worker as any).terminate?.()).catch(() => undefined)
     throw Error(`Worker init message states unexpected type of expose(): ${type}`)
   }
 }
