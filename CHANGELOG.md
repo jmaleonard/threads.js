@@ -3,6 +3,55 @@
 All notable changes to `threadsx` are documented here. Each release is also
 published on the [releases page](https://github.com/jmaleonard/threadsx/releases).
 
+## v2.2.0
+
+Reliability and modernization release: the worker-resolution internals lose
+their `eval()` hacks, a leak audit fixes five lifecycle leaks, and coverage now
+includes the browser-only code paths. No breaking API changes.
+
+### ✨ Improvements
+
+- **No more `eval("require")` hacks.** Runtime module and worker-path
+  resolution now goes through a single `module.createRequire`-based helper,
+  with webpack's `__non_webpack_require__` escape hatch as one documented
+  branch. `worker_threads` is imported statically (it has been stable since
+  Node 12 and threadsx requires Node 20+); browser bundles are unaffected.
+
+### 🐛 Bug fixes
+
+All five are lifecycle leaks found in an audit, each with a regression test:
+
+- `spawn()` now terminates the worker when the init message carries an unknown
+  `expose()` type, instead of throwing and leaking a live worker handle.
+- `Thread.events()` now emits its termination event, completes, and detaches
+  its listeners when a worker crashes or exits on its own — previously that
+  only happened via `Thread.terminate()`.
+- A **canceled pool task's promise now rejects** (`"Task has been canceled."`)
+  instead of never settling and holding a pool event subscription forever.
+- `Pool.settled()` no longer leaks its internal subscription on the
+  failed-init and resolve-immediately paths.
+- `Pool.queue()` no longer leaks an event subscription when refusing a task
+  over `maxQueuedJobs`.
+
+### 🧪 Tests & coverage
+
+- **Browser coverage counts now.** The Playwright fixtures are
+  istanbul-instrumented (with source maps chaining back to the TypeScript
+  sources), workers hand their counters back to the page, and
+  `scripts/merge-coverage.mjs` merges everything with the node c8 run. The
+  previously excluded browser-only files (`implementation.browser.ts` ×2,
+  `get-bundle-url.browser.ts`, `bundle-entry.ts`) are now in the report, and
+  CI uploads the merged lcov.
+- Node coverage raised to 95.4% statements / 85.8% branches / 93.1% functions
+  (thresholds 94/84/91), with new tests for node `BlobWorker` spawning,
+  pre-init crashes and rejections, invalid `expose()` arguments, observable
+  errors, job cancelation, and pool queue limits.
+
+### 🧰 Internal
+
+- `npm audit` is clean again (five dev-toolchain advisories resolved); bumped
+  `c8` to 11 and `eslint-config-prettier` to 10.
+
 ## v2.1.0
 
 Bug-fix and hardening release addressing a batch of long-standing upstream
