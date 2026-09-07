@@ -7,7 +7,7 @@ aside:
   toc: true
 ---
 
-## Quick start
+## Your first worker
 
 This is how to spawn a simple worker managed using threadsx. The worker will hash passwords, lifting the main CPU load off the master thread.
 
