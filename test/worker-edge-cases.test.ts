@@ -1,6 +1,6 @@
 import test from "ava"
-import { spawn, Thread, Worker } from "../src/index"
-import { expose } from "../src/worker"
+import { spawn, spawnShared, Thread, Worker } from "../src/index"
+import { expose, exposeShared } from "../src/worker"
 import WorkerThreadsImplementation from "../src/worker/implementation.worker_threads"
 
 test("spawn() rejects when the worker throws asynchronously before init", async t => {
@@ -69,6 +69,28 @@ test("unsubscribing early cancels the job in the worker", async t => {
 
 test("expose() throws when called in the master thread", t => {
   t.throws(() => expose(() => 1), { message: /master thread/ })
+})
+
+test("spawnShared() requires a name", async t => {
+  await t.throwsAsync(
+    spawnShared(() => null as any, undefined as any),
+    { message: /requires options\.name/ }
+  )
+})
+
+test("spawnShared() throws a clear error outside the browser", async t => {
+  // Node has neither SharedWorker nor navigator.locks.
+  await t.throwsAsync(
+    spawnShared(() => null as any, { name: "node-test" }),
+    { message: /only available in browsers/ }
+  )
+})
+
+test("exposeShared() throws outside a worker", t => {
+  t.throws(
+    () => exposeShared(() => 1),
+    { message: /must be called inside a SharedWorker or Worker/ }
+  )
 })
 
 test("worker_threads implementation guards against a missing parent port", t => {

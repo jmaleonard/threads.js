@@ -85,6 +85,42 @@ test("register installs the threads Worker as a global", async t => {
 
 // --- allSettled ponyfill ----------------------------------------------------
 
+test("Thread.broadcasts() throws for a non-shared thread", async t => {
+  const { Thread } = await import("../src/index")
+  t.throws(() => Thread.broadcasts({} as any), { message: /only available on threads returned by spawnShared/ })
+})
+
+test("SharedWorkerLeaderLostError carries its name and default message", async t => {
+  const { SharedWorkerLeaderLostError } = await import("../src/index")
+  const error = new SharedWorkerLeaderLostError()
+  t.true(error instanceof Error)
+  t.is(error.name, "SharedWorkerLeaderLostError")
+  t.regex(error.message, /shared worker/)
+})
+
+test("a worker connection cancels its jobs on dispose()", async t => {
+  const { createConnection, createInitMessage } = await import("../src/worker/connection")
+  const { Observable } = await import("observable-fns")
+
+  let torndown = false
+  const posted: any[] = []
+  const connection = createConnection(
+    () => new Observable(() => {
+      return () => { torndown = true }
+    }),
+    message => posted.push(message)
+  )
+
+  connection.handleMessage({ type: "run", uid: 1, args: [] })
+  t.is(posted[0].type, "running")
+  t.false(torndown)
+
+  connection.dispose()
+  t.true(torndown)
+
+  t.deepEqual(createInitMessage(() => 1), { type: "init", exposed: { type: "function" } })
+})
+
 test("node-require resolves modules and directories without webpack", async t => {
   const { getModuleDirname, getNodeRequire, isWebpackBundle } = await import("../src/node-require")
   t.false(isWebpackBundle())

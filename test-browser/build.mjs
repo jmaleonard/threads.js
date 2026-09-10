@@ -36,21 +36,26 @@ const common = {
 
 await build({
   ...common,
-  entryPoints: [join(here, "fixtures", "main.ts")],
-  outfile: join(outdir, "main.js")
+  entryPoints: {
+    "main": join(here, "fixtures", "main.ts"),
+    "shared-main": join(here, "fixtures", "shared-main.ts")
+  },
+  outdir
 })
 
 await build({
   ...common,
   entryPoints: {
     "workers/hello-world": join(here, "fixtures", "workers", "hello-world.ts"),
-    "workers/increment": join(here, "fixtures", "workers", "increment.ts")
+    "workers/increment": join(here, "fixtures", "workers", "increment.ts"),
+    "workers/shared-counter": join(here, "fixtures", "workers", "shared-counter.ts")
   },
   outdir
 })
 
-// The HTML page is a static asset in both modes.
+// The HTML pages are static assets in both modes.
 cpSync(join(here, "fixtures", "index.html"), join(outdir, "index.html"))
+cpSync(join(here, "fixtures", "shared.html"), join(outdir, "shared.html"))
 
 if (withCoverage) {
   // The BlobWorker test loads /worker.js via importScripts. The shipped bundle
@@ -65,7 +70,7 @@ if (withCoverage) {
   })
 
   const instrumenter = createInstrumenter({ esModules: false, compact: true, produceSourceMap: false })
-  for (const bundle of ["main.js", "workers/hello-world.js", "workers/increment.js", "worker.js"]) {
+  for (const bundle of ["main.js", "shared-main.js", "workers/hello-world.js", "workers/increment.js", "workers/shared-counter.js", "worker.js"]) {
     const jsPath = join(outdir, bundle)
     const code = readFileSync(jsPath, "utf8")
     const inputSourceMap = JSON.parse(readFileSync(jsPath + ".map", "utf8"))

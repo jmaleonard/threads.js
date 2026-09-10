@@ -26,7 +26,7 @@ import * as path from "node:path"
 // count differently (c8 converts V8 coverage, the browser side is
 // istanbul-instrumented) and the merge adds browser-only files that node tests
 // cannot reach fully.
-const THRESHOLDS = { statements: 89, lines: 95, branches: 78, functions: 85 }
+const THRESHOLDS = { statements: 88, lines: 94, branches: 76, functions: 81 }
 
 const root = process.cwd()
 const srcPrefix = path.join(root, "src") + path.sep

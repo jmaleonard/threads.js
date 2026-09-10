@@ -372,6 +372,13 @@ counter.values().subscribe(count => {
       </div>
     </div>
     <div class="tx-feature">
+      <i class="fas fa-window-restore"></i>
+      <div>
+        <h3>Shared workers across tabs</h3>
+        <p><code>spawnShared()</code> gives every tab one worker instance — native SharedWorker where available, a BroadcastChannel fallback elsewhere — with <code>broadcast()</code> events to all tabs.</p>
+      </div>
+    </div>
+    <div class="tx-feature">
       <i class="fas fa-right-left"></i>
       <div>
         <h3>Zero-copy transfers</h3>

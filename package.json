@@ -143,7 +143,9 @@
     ],
     "exclude": [
       "src/**/*.browser.ts",
+      "src/master/shared/**",
       "src/worker/bundle-entry.ts",
+      "src/worker/expose-shared.ts",
       "src/types/worker.ts"
     ],
     "reporter": [

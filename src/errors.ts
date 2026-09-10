@@ -18,6 +18,20 @@ export class ThreadCloneError extends Error {
 }
 
 /**
+ * Thrown to reject pending shared-worker calls when the tab that owned the
+ * fallback (BroadcastChannel) worker went away and a new leader took over.
+ * The shared worker was respawned, so its in-memory state is fresh; calls
+ * made after this error work against the new instance.
+ */
+export class SharedWorkerLeaderLostError extends Error {
+  constructor(message: string = "The tab hosting the shared worker closed. The worker was restarted; retry the call.") {
+    super(message)
+    this.name = "SharedWorkerLeaderLostError"
+    Object.setPrototypeOf(this, SharedWorkerLeaderLostError.prototype)
+  }
+}
+
+/**
  * Whether an error is a structured-clone failure. Both browsers and Node's
  * `worker_threads` throw a `DOMException`/error named `"DataCloneError"` when a
  * value cannot be cloned across the thread boundary.

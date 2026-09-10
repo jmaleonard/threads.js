@@ -1,5 +1,5 @@
 import { Observable } from "observable-fns"
-import { $errors, $events, $terminate } from "../symbols"
+import { $broadcasts, $errors, $events, $terminate } from "../symbols"
 import { Thread as ThreadType, WorkerEvent } from "../types/master"
 
 function fail(message: string): never {
@@ -17,6 +17,10 @@ export const Thread = {
   /** Return an observable that can be used to subscribe to internal events happening in the thread. Useful for debugging. */
   events<ThreadT extends ThreadType>(thread: ThreadT): Observable<WorkerEvent> {
     return thread[$events] || fail("Events observable not found. Make sure to pass a thread instance as returned by the spawn() promise.")
+  },
+  /** Return an observable of worker-initiated broadcast events. Only available on threads returned by spawnShared(). */
+  broadcasts<ThreadT extends ThreadType>(thread: ThreadT): Observable<any> {
+    return (thread as any)[$broadcasts] || fail("Broadcasts observable not found. It is only available on threads returned by spawnShared().")
   },
   /** Terminate a thread. Remember to terminate every thread when you are done using it. */
   terminate<ThreadT extends ThreadType>(thread: ThreadT) {

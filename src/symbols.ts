@@ -1,3 +1,4 @@
+export const $broadcasts = Symbol("thread.broadcasts")
 export const $errors = Symbol("thread.errors")
 export const $events = Symbol("thread.events")
 export const $terminate = Symbol("thread.terminate")
