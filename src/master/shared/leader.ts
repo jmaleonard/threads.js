@@ -9,10 +9,21 @@
  * worker and announces itself, at which point clients fail their in-flight
  * calls with SharedWorkerLeaderLostError and carry on against the fresh
  * instance.
+ *
+ * Lifecycle rules that earlier versions got wrong:
+ * - Leadership acquires its OWN bus user the moment the lock is won. It must
+ *   never borrow a client's refcounted bus: a Thread.terminate() in the
+ *   leader tab would close the channel while the lock is still held,
+ *   permanently hanging every other tab.
+ * - A tab whose clients have all terminated withdraws its queued lock request
+ *   (AbortController) and clears its election state, so a later spawnShared()
+ *   in the same tab elects cleanly and no zombie leader can win a lock for
+ *   nobody.
  */
-import { MasterMessageType, WorkerMessageType } from "../../types/messages"
+import { sharedHeartbeat } from "../../shared-heartbeat"
 import { Worker as WorkerType } from "../../types/master"
-import { BusEnvelope, lockName, SharedBus } from "./bus"
+import { MasterMessageType, WorkerMessageType } from "../../types/messages"
+import { acquireSharedBus, BusEnvelope, lockName } from "./bus"
 
 export type SharedWorkerFactory = (context: { shared: boolean }) => any
 
@@ -21,28 +32,77 @@ interface JobRoute {
   clientUid: number
 }
 
-const electionsStarted = new Set<string>()
-
-/**
- * Join the leader election for `name`. Idempotent per (tab, name). Whichever
- * tab's lock callback runs becomes the leader for the rest of its lifetime.
- */
-export function startLeaderElection(name: string, bus: SharedBus, factory: SharedWorkerFactory): void {
-  if (electionsStarted.has(name)) return
-  electionsStarted.add(name)
-
-  navigator.locks.request(lockName(name), { mode: "exclusive" }, () => {
-    runAsLeader(bus, factory)
-    // Hold the lock until the tab goes away.
-    return new Promise<void>(() => undefined)
-  }).catch(() => {
-    // The lock request itself failed (e.g. the tab is shutting down) —
-    // another tab will win the election instead.
-    electionsStarted.delete(name)
-  })
+interface Election {
+  clients: number
+  controller: { aborted: boolean, abort(): void, signal?: any }
+  isLeader: boolean
 }
 
-function runAsLeader(bus: SharedBus, factory: SharedWorkerFactory): void {
+const elections = new Map<string, Election>()
+
+function createAbortController(): Election["controller"] {
+  if (typeof AbortController === "function") {
+    const controller = new AbortController()
+    return { get aborted() { return controller.signal.aborted }, abort: () => controller.abort(), signal: controller.signal }
+  }
+  // Environments without AbortController: the request simply stays queued.
+  let aborted = false
+  return { get aborted() { return aborted }, abort: () => { aborted = true } }
+}
+
+/**
+ * Register one spawnShared() client for `name` and join the leader election
+ * if this tab has not joined yet. Returns a release function to call on
+ * Thread.terminate(): when the tab's last client releases and the tab has not
+ * (yet) become leader, its queued lock request is withdrawn and the election
+ * state cleared so a future spawnShared() starts fresh. An active leader
+ * keeps serving other tabs even with no local clients.
+ */
+export function registerSharedClient(name: string, factory: SharedWorkerFactory): () => void {
+  let election = elections.get(name)
+  if (!election) {
+    election = { clients: 0, controller: createAbortController(), isLeader: false }
+    elections.set(name, election)
+
+    const request: Promise<void> = (navigator as any).locks.request(
+      lockName(name),
+      { mode: "exclusive", signal: election.controller.signal },
+      () => {
+        election!.isLeader = true
+        runAsLeader(name, factory)
+        // Hold the lock until the tab goes away.
+        return new Promise<void>(() => undefined)
+      }
+    )
+    request.catch(() => {
+      // Aborted (last local client left before we were elected) or the tab is
+      // shutting down. If this election record is still current, clear it so
+      // a later spawnShared() in this tab can re-join.
+      if (elections.get(name) === election) {
+        elections.delete(name)
+      }
+    })
+  }
+
+  election.clients++
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    election!.clients--
+    if (election!.clients <= 0 && !election!.isLeader) {
+      election!.controller.abort()
+      if (elections.get(name) === election) {
+        elections.delete(name)
+      }
+    }
+  }
+}
+
+function runAsLeader(name: string, factory: SharedWorkerFactory): void {
+  // The leader's own bus user: independent of any client's lifecycle, held
+  // until the tab dies.
+  const bus = acquireSharedBus(name)
   const worker: WorkerType = factory({ shared: false })
   const leaderId = Math.random().toString(36).slice(2)
 
@@ -53,8 +113,43 @@ function runAsLeader(bus: SharedBus, factory: SharedWorkerFactory): void {
 
   let initMessage: any = null
   const pendingHellos = new Set<string>()
+  const lastSeenByClient = new Map<string, number>()
 
   const replyToClient = (clientId: string, msg: any) => bus.post({ kind: "s2c", clientId, msg, leaderId })
+
+  const postClientCount = () => {
+    worker.postMessage({ type: MasterMessageType.clients, count: lastSeenByClient.size })
+  }
+
+  const trackClient = (clientId: string) => {
+    const known = lastSeenByClient.has(clientId)
+    lastSeenByClient.set(clientId, Date.now())
+    if (!known) postClientCount()
+  }
+
+  const dropClientJobs = (clientId: string) => {
+    for (const [leaderUid, route] of routesByLeaderUid) {
+      if (route.clientId !== clientId) continue
+      worker.postMessage({ type: MasterMessageType.cancel, uid: leaderUid })
+      routesByLeaderUid.delete(leaderUid)
+      leaderUidByClientJob.delete(clientJobKey(route.clientId, route.clientUid))
+    }
+  }
+
+  const dropClient = (clientId: string) => {
+    dropClientJobs(clientId)
+    if (lastSeenByClient.delete(clientId)) postClientCount()
+  }
+
+  // Prune clients that died without a bye (crash, OOM kill): cancel their
+  // jobs so e.g. observable intervals in the worker do not run forever.
+  const pruneTimer: any = setInterval(() => {
+    const deadline = Date.now() - sharedHeartbeat.timeout
+    for (const [clientId, lastSeen] of lastSeenByClient) {
+      if (lastSeen < deadline) dropClient(clientId)
+    }
+  }, sharedHeartbeat.interval)
+  if (pruneTimer && typeof pruneTimer.unref === "function") pruneTimer.unref()
 
   worker.addEventListener("message", ((event: any) => {
     const msg = event.data
@@ -63,6 +158,7 @@ function runAsLeader(bus: SharedBus, factory: SharedWorkerFactory): void {
     if (msg.type === WorkerMessageType.init) {
       initMessage = msg
       for (const clientId of pendingHellos) {
+        trackClient(clientId)
         replyToClient(clientId, initMessage)
       }
       pendingHellos.clear()
@@ -91,24 +187,17 @@ function runAsLeader(bus: SharedBus, factory: SharedWorkerFactory): void {
   }) as EventListener)
 
   worker.addEventListener("error", ((event: any) => {
-    const message = event && event.data && event.data.message
-      ? String(event.data.message)
-      : "The shared worker errored."
+    // Browser Workers fire an ErrorEvent whose text lives on event.message;
+    // threadsx's node Worker wrapper delivers { data: Error }.
+    const message = (event && typeof event.message === "string" && event.message) ||
+      (event && event.data && event.data.message ? String(event.data.message) : "The shared worker errored.")
     bus.post({ kind: "worker-error", message })
   }) as EventListener)
-
-  const dropClientJobs = (clientId: string) => {
-    for (const [leaderUid, route] of routesByLeaderUid) {
-      if (route.clientId !== clientId) continue
-      worker.postMessage({ type: MasterMessageType.cancel, uid: leaderUid })
-      routesByLeaderUid.delete(leaderUid)
-      leaderUidByClientJob.delete(clientJobKey(route.clientId, route.clientUid))
-    }
-  }
 
   bus.subscribe((envelope: BusEnvelope) => {
     if (envelope.kind === "hello") {
       if (initMessage) {
+        trackClient(envelope.clientId)
         replyToClient(envelope.clientId, initMessage)
       } else {
         pendingHellos.add(envelope.clientId)
@@ -116,12 +205,20 @@ function runAsLeader(bus: SharedBus, factory: SharedWorkerFactory): void {
       return
     }
 
+    if (envelope.kind === "hb") {
+      if (lastSeenByClient.has(envelope.clientId)) {
+        lastSeenByClient.set(envelope.clientId, Date.now())
+      }
+      return
+    }
+
     if (envelope.kind !== "c2s") return
-    // Jobs sent before this leader announced itself belong to a dead
-    // predecessor. The client will reject them on our leader-online and
-    // retry, so serving them here would execute them twice.
-    if (!initMessage) return
+    // Drop jobs from a dead predecessor's epoch (or from before any leader
+    // existed): the client rejects them on leader-online and retries, so
+    // serving them here would execute their side effects twice.
+    if (!initMessage || envelope.leaderId !== leaderId) return
     const { clientId, msg } = envelope
+    trackClient(clientId)
 
     if (msg.type === MasterMessageType.run) {
       const leaderUid = nextLeaderUid++
@@ -136,7 +233,7 @@ function runAsLeader(bus: SharedBus, factory: SharedWorkerFactory): void {
         worker.postMessage({ type: MasterMessageType.cancel, uid: leaderUid })
       }
     } else if (msg.type === MasterMessageType.bye) {
-      dropClientJobs(clientId)
+      dropClient(clientId)
     }
   })
 }

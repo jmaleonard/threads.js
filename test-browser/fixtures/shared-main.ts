@@ -7,7 +7,7 @@ import { spawnShared, Thread } from "../../dist-esm/index.js"
 
 declare const SharedWorker: any
 
-const state: { api: any, broadcasts: any[] } = { api: null, broadcasts: [] }
+const state: { api: any, broadcasts: any[], broadcastsCompleted: boolean } = { api: null, broadcasts: [], broadcastsCompleted: false }
 
 ;(window as any).initShared = async (options: { name: string, forceFallback?: boolean }) => {
   const api = await spawnShared(
@@ -17,8 +17,27 @@ const state: { api: any, broadcasts: any[] } = { api: null, broadcasts: [] }
     { name: options.name, forceFallback: options.forceFallback, timeout: 8000 }
   )
   state.api = api
-  Thread.broadcasts(api).subscribe((value: any) => state.broadcasts.push(value))
+  Thread.broadcasts(api).subscribe({
+    next: (value: any) => state.broadcasts.push(value),
+    complete: () => { state.broadcastsCompleted = true }
+  })
   return true
+}
+
+// Spawns against a worker that throws during startup; returns the rejection
+// message (spawnShared must reject with the real error, not time out).
+;(window as any).initSharedStartupFailure = async (name: string) => {
+  try {
+    await spawnShared(
+      ({ shared }) => shared
+        ? new SharedWorker("./workers/shared-throw.js", { name })
+        : new Worker("./workers/shared-throw.js"),
+      { name, timeout: 4000 }
+    )
+    return "resolved"
+  } catch (error: any) {
+    return String(error && error.message)
+  }
 }
 
 ;(window as any).sharedIncrement = () => state.api.increment()
@@ -41,3 +60,4 @@ const state: { api: any, broadcasts: any[] } = { api: null, broadcasts: [] }
 })
 
 ;(window as any).sharedTerminate = () => Thread.terminate(state.api)
+;(window as any).sharedBroadcastsCompleted = () => state.broadcastsCompleted

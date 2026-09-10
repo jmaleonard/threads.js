@@ -70,6 +70,8 @@ Broadcasts are fire-and-forget events from the worker — independent of any cal
 
 - `Thread.terminate(thread)` disconnects **this tab only**. The worker keeps running while any other tab is connected. Browsers shut a `SharedWorker` down once its last client is gone.
 - Observables returned by worker functions are per-tab jobs: unsubscribing in one tab cancels only that tab's subscription.
+- Tabs that disappear without disconnecting (a crash, a mobile OOM kill) are pruned by a heartbeat after ~45 seconds: their jobs are canceled and `connectionCount()` drops. Back/forward-cache navigations do **not** disconnect — a page restored via the Back button keeps its working connection.
+- `Thread.broadcasts()` completes when the thread terminates, like `Thread.events()`.
 - On the fallback path, if the leader tab closes, another tab takes over and **respawns the worker with fresh state**. Calls that were in flight reject with `SharedWorkerLeaderLostError`; calls made afterwards work against the new instance. Keep shared state re-derivable, or persist it (e.g. IndexedDB) if it must survive.
 
 ```js

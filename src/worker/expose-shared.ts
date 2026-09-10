@@ -9,9 +9,17 @@
  *   leader multiplexes the other tabs over a BroadcastChannel.
  *
  * In both runtimes exposeShared() returns a `broadcast(value)` function that
- * pushes a worker-initiated event to every connected client.
+ * pushes a worker-initiated event to every connected client, and
+ * `connectionCount()` reporting the number of connected tabs (fed by the
+ * leader on the fallback path).
+ *
+ * Liveness: a tab that dies without its bye (crash, OOM kill) would leak its
+ * connection and keep its observable subscriptions running forever. The
+ * shared scope pings each port and prunes ports that stop answering; the
+ * fallback leader does the equivalent for its clients over the bus.
  */
 import { serialize } from "../common"
+import { sharedHeartbeat } from "../shared-heartbeat"
 import { MasterMessageType, WorkerMessageType } from "../types/messages"
 import { WorkerFunction, WorkerModule } from "../types/worker"
 import { createConnection, createInitMessage } from "./connection"
@@ -19,7 +27,7 @@ import { createConnection, createInitMessage } from "./connection"
 export interface SharedWorkerContext {
   /** Push a worker-initiated event to every connected client (all tabs). */
   broadcast(value: any): void
-  /** Number of currently known client connections (native shared scope only; 1 in the fallback). */
+  /** Number of currently connected client tabs. */
   connectionCount(): number
 }
 
@@ -31,6 +39,8 @@ interface SharedScopePort {
 }
 
 const isByeMessage = (data: any) => data && data.type === MasterMessageType.bye
+const isPongMessage = (data: any) => data && data.type === MasterMessageType.pong
+const isClientsMessage = (data: any) => data && data.type === MasterMessageType.clients
 
 function isSharedWorkerScope(): boolean {
   return typeof self !== "undefined" && "onconnect" in (self as any)
@@ -72,35 +82,102 @@ export function exposeShared(exposed: WorkerFunction | WorkerModule<any>): Share
   )
 }
 
+function serializeUncaught(error: any) {
+  return {
+    type: WorkerMessageType.uncaughtError,
+    error: serialize(error instanceof Error ? error : Error(String(error))) as any
+  }
+}
+
 function exposeInSharedScope(exposed: WorkerFunction | WorkerModule<any>): SharedWorkerContext {
-  const ports = new Set<SharedScopePort>()
+  interface PortState {
+    connection: { handleMessage(data: any): void, dispose(): void }
+    lastSeen: number
+  }
+  const ports = new Map<SharedScopePort, PortState>()
   const initMessage = createInitMessage(exposed)
+
+  const dropPort = (port: SharedScopePort) => {
+    const state = ports.get(port)
+    if (!state) return
+    state.connection.dispose()
+    ports.delete(port)
+    port.close()
+  }
+
+  // SharedWorkerGlobalScope has no postMessage: uncaught errors must be
+  // relayed through the connected ports. Errors thrown before any tab
+  // connected (e.g. a bad import) are buffered and delivered right after
+  // init, so spawnShared() rejects with the real error instead of timing out.
+  const bufferedUncaught: any[] = []
+  const relayUncaught = (error: any) => {
+    const message = serializeUncaught(error)
+    if (ports.size === 0) {
+      bufferedUncaught.push(message)
+      return
+    }
+    for (const port of ports.keys()) {
+      port.postMessage(message)
+    }
+  }
+  ;(self as any).addEventListener("error", (event: any) => {
+    relayUncaught(event && (event.error || event.message) || event)
+  })
+  ;(self as any).addEventListener("unhandledrejection", (event: any) => {
+    const reason = event && (event as any).reason
+    if (reason && typeof reason.message === "string") {
+      relayUncaught(reason)
+    }
+  })
+
+  // Prune ports whose tab died without a bye: ping every interval, drop
+  // ports that have not answered (or spoken) within the timeout — otherwise
+  // their subscriptions (e.g. observable intervals) run forever.
+  const pingTimer: any = setInterval(() => {
+    const deadline = Date.now() - sharedHeartbeat.timeout
+    for (const [port, state] of ports) {
+      if (state.lastSeen < deadline) {
+        dropPort(port)
+      } else {
+        port.postMessage({ type: WorkerMessageType.ping })
+      }
+    }
+  }, sharedHeartbeat.interval)
+  if (pingTimer && typeof pingTimer.unref === "function") pingTimer.unref()
 
   ;(self as any).addEventListener("connect", (event: any) => {
     const port: SharedScopePort = event.ports[0]
     const connection = createConnection(exposed, message => port.postMessage(message))
+    const state: PortState = { connection, lastSeen: Date.now() }
 
     port.addEventListener("message", (messageEvent: any) => {
-      if (isByeMessage(messageEvent.data)) {
+      state.lastSeen = Date.now()
+      const data = messageEvent.data
+      if (isPongMessage(data)) return
+      if (isByeMessage(data)) {
         // The client disconnected deliberately (Thread.terminate() or
         // pagehide). Cancel its jobs and stop broadcasting to it.
-        connection.dispose()
-        ports.delete(port)
-        port.close()
+        dropPort(port)
         return
       }
-      connection.handleMessage(messageEvent.data)
+      connection.handleMessage(data)
     })
     port.start()
-    ports.add(port)
+    ports.set(port, state)
+    // Errors thrown before any tab connected go out FIRST, so a spawnShared()
+    // against a worker that failed during startup rejects with the real error
+    // instead of resolving against a broken instance.
+    for (const buffered of bufferedUncaught) {
+      port.postMessage(buffered)
+    }
     port.postMessage(initMessage)
   })
 
   return {
     broadcast(value: any) {
       const message = { type: WorkerMessageType.broadcast, payload: serialize(value) }
-      for (const port of ports) {
-        // Posting to a port whose tab died without a bye is a harmless no-op.
+      for (const port of ports.keys()) {
+        // Posting to a port whose tab died moments ago is a harmless no-op.
         port.postMessage(message)
       }
     },
@@ -113,9 +190,17 @@ function exposeInSharedScope(exposed: WorkerFunction | WorkerModule<any>): Share
 function exposeInDedicatedScope(exposed: WorkerFunction | WorkerModule<any>): SharedWorkerContext {
   const scope = self as any
   const connection = createConnection(exposed, (message, transferList) => scope.postMessage(message, transferList))
+  // The leader keeps this up to date so connectionCount() means the same
+  // thing on both transports.
+  let clientCount = 1
 
   scope.addEventListener("message", (messageEvent: any) => {
-    connection.handleMessage(messageEvent.data)
+    const data = messageEvent.data
+    if (isClientsMessage(data)) {
+      clientCount = data.count
+      return
+    }
+    connection.handleMessage(data)
   })
   scope.postMessage(createInitMessage(exposed))
 
@@ -125,7 +210,7 @@ function exposeInDedicatedScope(exposed: WorkerFunction | WorkerModule<any>): Sh
       scope.postMessage({ type: WorkerMessageType.broadcast, payload: serialize(value) })
     },
     connectionCount() {
-      return 1
+      return clientCount
     }
   }
 }

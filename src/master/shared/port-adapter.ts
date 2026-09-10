@@ -8,7 +8,7 @@
  * The shared worker itself lives on while other tabs are connected.
  */
 import { Worker as WorkerType } from "../../types/master"
-import { MasterMessageType } from "../../types/messages"
+import { MasterMessageType, WorkerMessageType } from "../../types/messages"
 
 interface MessagePortLike {
   start(): void
@@ -29,11 +29,25 @@ export class SharedWorkerPortAdapter implements WorkerType {
 
   constructor(sharedWorker: SharedWorkerLike) {
     this.port = sharedWorker.port
+
+    // Liveness: answer the worker's pings so it can prune ports whose tabs
+    // died without a bye.
+    this.port.addEventListener("message", (event: any) => {
+      if (event && event.data && event.data.type === WorkerMessageType.ping) {
+        this.postMessage({ type: MasterMessageType.pong })
+      }
+    })
     this.port.start()
 
     // If the tab goes away without Thread.terminate(), still tell the worker,
-    // so it can prune this connection from its broadcast set.
-    const onPagehide = () => this.sayBye()
+    // so it can prune this connection from its broadcast set. A bfcache
+    // navigation (event.persisted) may be restored with this page's JS state
+    // intact — saying goodbye then would leave the restored page holding a
+    // dead thread proxy.
+    const onPagehide = (event: any) => {
+      if (event && event.persisted) return
+      this.sayBye()
+    }
     if (typeof self !== "undefined" && typeof (self as any).addEventListener === "function") {
       ;(self as any).addEventListener("pagehide", onPagehide)
       this.detachPagehide = () => (self as any).removeEventListener("pagehide", onPagehide)

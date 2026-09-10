@@ -61,7 +61,9 @@ export function expose(exposed: WorkerFunction | WorkerModule<any>) {
   Implementation.postMessageToMaster(createInitMessage(exposed))
 }
 
-if (typeof self !== "undefined" && typeof self.addEventListener === "function" && Implementation.isWorkerRuntime()) {
+// Not in SharedWorkerGlobalScope: it has no self.postMessage to relay
+// through — exposeShared() installs its own per-port relay there instead.
+if (typeof self !== "undefined" && typeof self.addEventListener === "function" && !("onconnect" in (self as any)) && Implementation.isWorkerRuntime()) {
   self.addEventListener("error", event => {
     // Post with some delay, so the master had some time to subscribe to messages
     setTimeout(() => postUncaughtErrorMessage(event.error || event), 250)

@@ -10,6 +10,8 @@ declare global {
     sharedLastBroadcast(): any
     sharedTicks(): Promise<number[]>
     sharedTerminate(): Promise<void>
+    sharedBroadcastsCompleted(): boolean
+    initSharedStartupFailure(name: string): Promise<string>
   }
 }
 
@@ -67,8 +69,25 @@ test("the BroadcastChannel fallback shares one worker via a leader tab", async (
 
   expect(await tabB.evaluate(() => window.sharedTicks())).toEqual([0, 1, 2])
 
+  // Regression: Thread.broadcasts() must complete on termination (it shares
+  // the events pipeline's lifecycle instead of leaking a raw listener).
+  await tabB.evaluate(() => window.sharedTerminate())
+  await tabB.waitForFunction(() => window.sharedBroadcastsCompleted())
+
   await tabA.close()
   await tabB.close()
+})
+
+test("a shared worker that throws during startup rejects spawnShared with the real error", async ({ context }) => {
+  test.setTimeout(30000)
+  // Regression: SharedWorkerGlobalScope has no self.postMessage, so uncaught
+  // startup errors were swallowed and spawnShared() hit the generic init
+  // timeout instead of surfacing the actual failure.
+  const page = await context.newPage()
+  await page.goto("/shared.html")
+  const message = await page.evaluate(name => window.initSharedStartupFailure(name), "startup-failure")
+  expect(message).toContain("Shared worker startup failure")
+  await page.close()
 })
 
 test("fallback failover: a new leader takes over when the leader tab closes", async ({ context }) => {

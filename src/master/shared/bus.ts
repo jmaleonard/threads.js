@@ -11,7 +11,13 @@
 
 export type BusEnvelope =
   | { kind: "hello", clientId: string }
-  | { kind: "c2s", clientId: string, msg: any }
+  // hb: client liveness heartbeat, so the leader can prune clients that died
+  // without a bye (crash, OOM kill) and cancel their jobs.
+  | { kind: "hb", clientId: string }
+  // c2s carries the leaderId the client believes it is talking to. The leader
+  // drops job messages from a stale epoch: the client will reject them on
+  // leader-online and retry, so serving them here would execute them twice.
+  | { kind: "c2s", clientId: string, msg: any, leaderId: string | null }
   | { kind: "s2c", clientId: string, msg: any, leaderId: string }
   | { kind: "s2c-all", msg: any }
   | { kind: "worker-error", message: string }
@@ -44,6 +50,12 @@ export function acquireSharedBus(name: string): SharedBus {
   }
 
   const channel = new BroadcastChannel(channelName(name))
+  // In Node (tests, and any future support) an open channel holds the event
+  // loop; unref it so it never keeps a process alive on its own. Browsers'
+  // BroadcastChannel has no unref — this is a no-op there.
+  if (typeof (channel as any).unref === "function") {
+    ;(channel as any).unref()
+  }
   const listeners = new Set<(envelope: BusEnvelope) => void>()
 
   const deliver = (envelope: BusEnvelope) => {

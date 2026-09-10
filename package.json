@@ -143,9 +143,9 @@
     ],
     "exclude": [
       "src/**/*.browser.ts",
-      "src/master/shared/**",
+      "src/master/shared/port-adapter.ts",
+      "src/master/shared/spawn-shared.ts",
       "src/worker/bundle-entry.ts",
-      "src/worker/expose-shared.ts",
       "src/types/worker.ts"
     ],
     "reporter": [

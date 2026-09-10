@@ -48,7 +48,8 @@ await build({
   entryPoints: {
     "workers/hello-world": join(here, "fixtures", "workers", "hello-world.ts"),
     "workers/increment": join(here, "fixtures", "workers", "increment.ts"),
-    "workers/shared-counter": join(here, "fixtures", "workers", "shared-counter.ts")
+    "workers/shared-counter": join(here, "fixtures", "workers", "shared-counter.ts"),
+    "workers/shared-throw": join(here, "fixtures", "workers", "shared-throw.ts")
   },
   outdir
 })
@@ -70,7 +71,7 @@ if (withCoverage) {
   })
 
   const instrumenter = createInstrumenter({ esModules: false, compact: true, produceSourceMap: false })
-  for (const bundle of ["main.js", "shared-main.js", "workers/hello-world.js", "workers/increment.js", "workers/shared-counter.js", "worker.js"]) {
+  for (const bundle of ["main.js", "shared-main.js", "workers/hello-world.js", "workers/increment.js", "workers/shared-counter.js", "workers/shared-throw.js", "worker.js"]) {
     const jsPath = join(outdir, bundle)
     const code = readFileSync(jsPath, "utf8")
     const inputSourceMap = JSON.parse(readFileSync(jsPath + ".map", "utf8"))

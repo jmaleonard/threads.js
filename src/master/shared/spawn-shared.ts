@@ -7,14 +7,14 @@
  */
 import { multicast, Observable } from "observable-fns"
 import { deserialize } from "../../common"
-import { $broadcasts } from "../../symbols"
-import { Worker as WorkerType } from "../../types/master"
+import { $broadcasts, $events } from "../../symbols"
+import { Worker as WorkerType, WorkerEventType } from "../../types/master"
 import { WorkerMessageType } from "../../types/messages"
 import { WorkerFunction, WorkerModule } from "../../types/worker"
 import { ArbitraryWorkerInterface, ExposedToThreadType, spawn } from "../spawn"
 import { acquireSharedBus } from "./bus"
 import { BusClientAdapter } from "./bus-adapter"
-import { SharedWorkerFactory, startLeaderElection } from "./leader"
+import { registerSharedClient, SharedWorkerFactory } from "./leader"
 import { SharedWorkerLike, SharedWorkerPortAdapter } from "./port-adapter"
 
 export interface SpawnSharedOptions {
@@ -99,22 +99,24 @@ export async function spawnShared<Exposed extends WorkerFunction | WorkerModule<
     if (!hasFallbackPrerequisites()) {
       throw Error("spawnShared() fallback requires BroadcastChannel and the Web Locks API.")
     }
-    const bus = acquireSharedBus(options.name)
-    startLeaderElection(options.name, bus, factory)
-    worker = new BusClientAdapter(bus)
+    // Join the election before opening the client, and undo it when this
+    // client terminates — an unelected tab whose clients are all gone must
+    // withdraw its queued lock request.
+    const release = registerSharedClient(options.name, factory)
+    worker = new BusClientAdapter(acquireSharedBus(options.name), release)
   }
 
-  const broadcasts = multicast(new Observable<any>(observer => {
-    const handler = (event: any) => {
-      if (event.data && event.data.type === WorkerMessageType.broadcast) {
-        observer.next(deserialize(event.data.payload))
-      }
-    }
-    worker.addEventListener("message", handler)
-    return () => worker.removeEventListener("message", handler)
-  }))
-
   const thread = await spawn<Exposed>(worker as any, { timeout: options.timeout })
-  ;(thread as any)[$broadcasts] = broadcasts
+
+  // Broadcasts are derived from the same events pipeline spawn() built, so
+  // they inherit its lifecycle: listener removal and completion on
+  // termination, instead of a parallel raw listener that would never end.
+  const events: Observable<any> = (thread as any)[$events]
+  ;(thread as any)[$broadcasts] = multicast(
+    events
+      .filter((event: any) => event.type === WorkerEventType.message &&
+        event.data && event.data.type === WorkerMessageType.broadcast)
+      .map((event: any) => deserialize(event.data.payload))
+  )
   return thread
 }

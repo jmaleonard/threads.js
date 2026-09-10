@@ -11,7 +11,24 @@ export interface SerializedError {
 export enum MasterMessageType {
   bye = "bye",
   cancel = "cancel",
+  clients = "clients",
+  pong = "pong",
   run = "run"
+}
+
+/**
+ * Client-count update, sent to the fallback path's dedicated worker by the
+ * leader so `connectionCount()` reflects the actual number of connected tabs
+ * on both transports.
+ */
+export type MasterClientsMessage = {
+  type: MasterMessageType.clients,
+  count: number
+}
+
+/** Liveness reply to a shared worker's ping. */
+export type MasterPongMessage = {
+  type: MasterMessageType.pong
 }
 
 /**
@@ -34,7 +51,12 @@ export type MasterJobRunMessage = {
   args: any[]
 }
 
-export type MasterSentMessage = MasterByeMessage | MasterJobCancelMessage | MasterJobRunMessage
+export type MasterSentMessage =
+  | MasterByeMessage
+  | MasterClientsMessage
+  | MasterJobCancelMessage
+  | MasterJobRunMessage
+  | MasterPongMessage
 
 ////////////////////////////
 // Messages sent by worker:
@@ -43,9 +65,15 @@ export enum WorkerMessageType {
   broadcast = "broadcast",
   error = "error",
   init = "init",
+  ping = "ping",
   result = "result",
   running = "running",
   uncaughtError = "uncaughtError"
+}
+
+/** Liveness probe from a shared worker to a connected client. */
+export type WorkerPingMessage = {
+  type: WorkerMessageType.ping
 }
 
 /**
@@ -93,6 +121,7 @@ export type WorkerJobStartMessage = {
 export type WorkerSentMessage =
   | WorkerBroadcastMessage
   | WorkerInitMessage
+  | WorkerPingMessage
   | WorkerJobErrorMessage
   | WorkerJobResultMessage
   | WorkerJobStartMessage
