@@ -89,3 +89,46 @@ await pool.terminate()
 ```
 
 See the [thread pools guide](./usage-pool) for the full `Pool` API.
+
+## Share one worker across browser tabs
+
+A counter that every open tab increments together, with worker-initiated
+broadcasts keeping all tabs' UIs in sync. Uses a native `SharedWorker` where
+available and threadsx's BroadcastChannel fallback elsewhere.
+([full example](https://github.com/jmaleonard/threadsx/tree/main/examples/browser-shared-tabs))
+
+```js
+// main.mjs — every tab runs this and reaches the SAME worker instance
+import { spawnShared, Thread } from "threadsx"
+
+const counter = await spawnShared(
+  ({ shared }) => shared
+    ? new SharedWorker("./counter.worker.js", { name: "shared-counter" })
+    : new Worker("./counter.worker.js"),
+  { name: "shared-counter" }
+)
+
+Thread.broadcasts(counter).subscribe(({ count }) => {
+  document.getElementById("count").textContent = count
+})
+
+document.getElementById("increment").onclick = () => counter.increment()
+```
+
+```js
+// counter.worker.mjs
+import { exposeShared } from "threadsx/worker"
+
+let count = 0
+
+const { broadcast } = exposeShared({
+  increment() {
+    count += 1
+    broadcast({ count })   // update every connected tab
+    return count
+  }
+})
+```
+
+See the [shared workers guide](./usage-shared) for lifecycle, the fallback
+transport, and failover semantics.

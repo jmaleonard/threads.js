@@ -8,6 +8,7 @@ with `node`.
 |---------|---------------|
 | [node-cpu-offload](./node-cpu-offload) | An HTTP server that offloads a CPU-bound route to a long-lived worker, keeping the event loop responsive. |
 | [pool-batch](./pool-batch) | Distributing a batch of CPU-bound jobs across a pool of workers sized to the machine's cores. |
+| [browser-shared-tabs](./browser-shared-tabs) | One worker instance shared by every browser tab via `spawnShared()`, with `broadcast()` keeping all tabs in sync. Runs in the browser (bundled with esbuild, served locally). |
 
 All examples use the modern, bundler-friendly worker form:
 

@@ -112,6 +112,48 @@ await pool.completed()
 await pool.terminate()
 ```
 
+## Shared workers across browser tabs
+
+One worker instance for every tab of the origin (browser only). Native
+SharedWorker where available; elsewhere a leader tab elected via the Web Locks
+API owns a dedicated worker and serves other tabs over BroadcastChannel.
+
+```js
+// every tab — the factory must contain the literal constructor calls
+import { spawnShared, Thread } from "threadsx"
+
+const counter = await spawnShared(
+  ({ shared }) => shared
+    ? new SharedWorker(new URL("./counter.js", import.meta.url), { name: "counter" })
+    : new Worker(new URL("./counter.js", import.meta.url)),
+  { name: "counter" } // required: names the SharedWorker, channel and lock
+)
+
+await counter.increment()                                   // shared state
+Thread.broadcasts(counter).subscribe(({ count }) => { /* all tabs */ })
+await Thread.terminate(counter)                             // disconnects THIS tab only
+```
+
+```js
+// counter.js — works as SharedWorker AND as the fallback's dedicated worker
+import { exposeShared } from "threadsx/worker"
+
+let count = 0
+const { broadcast } = exposeShared({
+  increment() {
+    broadcast({ count: ++count })  // worker-initiated event to every tab
+    return count
+  }
+})
+```
+
+Semantics: observables are per-tab jobs (unsubscribing cancels only that tab's
+subscription). On the fallback path, if the leader tab closes another tab
+respawns the worker with fresh state; in-flight calls reject with
+SharedWorkerLeaderLostError and later calls succeed. Transfer() is not
+supported on the fallback path (BroadcastChannel structured-clones). In
+Node.js spawnShared() throws — use spawn().
+
 ## Transferable objects
 
 ```js
@@ -154,7 +196,9 @@ During development, threadsx can run a TypeScript worker directly if `tsx` (or
 
 Master entry (`threadsx`):
 - `spawn(worker, options?)` — initialize a worker, returns a thread proxy.
-- `Thread.terminate(thread)` / `Thread.events(thread)` / `Thread.errors(thread)`.
+- `spawnShared(factory, { name, timeout?, forceFallback? })` — connect all tabs to one shared worker instance (browser only).
+- `Thread.terminate(thread)` / `Thread.events(thread)` / `Thread.errors(thread)` / `Thread.broadcasts(sharedThread)`.
+- `SharedWorkerLeaderLostError` — rejection for in-flight calls during fallback leader failover.
 - `Worker` — the worker constructor (web worker or worker_threads, accepts a string path or URL).
 - `BlobWorker.fromText(source)` — create a worker from inline source.
 - `Pool(spawnFn, sizeOrOptions?)` — worker pool with `.queue()`, `.completed()`, `.settled()`, `.terminate()`.
@@ -163,6 +207,7 @@ Master entry (`threadsx`):
 
 Worker entry (`threadsx/worker`):
 - `expose(functionOrModule)` — publish the worker's API. Call exactly once per worker.
+- `exposeShared(functionOrModule)` — like expose() for shared workers; returns `{ broadcast(value), connectionCount() }`. Works in SharedWorker scope and as the fallback's dedicated worker.
 - `isWorkerRuntime()` — true inside a worker.
 - `Transfer`, `registerSerializer`.
 

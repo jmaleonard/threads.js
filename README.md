@@ -25,6 +25,7 @@ Offload CPU-intensive tasks to worker threads in node.js and web browsers using 
 * First-class support for **async functions** & **observables**
 * Write code once, run it **in the browser and in node**
 * Manage bulk task executions with **thread pools**
+* Share **one worker across all browser tabs** (`SharedWorker` with a `BroadcastChannel` fallback)
 * Use **`require()`** and **`import`/`export`** in workers
 * Ships **ESM and CommonJS** builds with **up-to-date TypeScript types**
 * Works with modern bundlers (**webpack 5, Vite, esbuild, rollup**) out of the box
@@ -134,6 +135,40 @@ Use `expose()` to make a function or an object containing methods callable from 
 
 When exposing an object, `spawn()` asynchronously returns an object exposing all the object's functions. If you `expose()` a function, `spawn()` returns a callable function instead.
 
+### Shared workers across tabs
+
+`spawnShared()` connects every tab of your origin to a single worker instance — a shared cache, one WebSocket, cross-tab coordination. It uses a native `SharedWorker` where the browser has one, and falls back to a leader-elected dedicated worker proxied over `BroadcastChannel` elsewhere (e.g. Chrome on Android).
+
+```js
+// every tab
+import { spawnShared, Thread } from "threadsx"
+
+const counter = await spawnShared(
+  ({ shared }) => shared
+    ? new SharedWorker(new URL("./workers/counter.js", import.meta.url), { name: "counter" })
+    : new Worker(new URL("./workers/counter.js", import.meta.url)),
+  { name: "counter" }
+)
+
+await counter.increment()                                  // all tabs share the count
+Thread.broadcasts(counter).subscribe(msg => { /* … */ })   // worker events, every tab
+```
+
+```js
+// workers/counter.js
+import { exposeShared } from "threadsx/worker"
+
+let count = 0
+const { broadcast } = exposeShared({
+  increment() {
+    broadcast({ count: ++count })
+    return count
+  }
+})
+```
+
+See the [shared workers guide](https://threadsx.jmaleonard.com/usage-shared) for lifecycle, fallback and failover semantics, and the [runnable example](./examples/browser-shared-tabs).
+
 ## Documentation
 
 Find the full documentation on the [website](https://threadsx.jmaleonard.com):
@@ -142,6 +177,7 @@ Find the full documentation on the [website](https://threadsx.jmaleonard.com):
 - [**Basic usage**](https://threadsx.jmaleonard.com/usage)
 - [**Using observables**](https://threadsx.jmaleonard.com/usage-observables)
 - [**Thread pools**](https://threadsx.jmaleonard.com/usage-pool)
+- [**Shared workers**](https://threadsx.jmaleonard.com/usage-shared)
 - [**Advanced**](https://threadsx.jmaleonard.com/usage-advanced)
 
 ## Debug

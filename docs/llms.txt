@@ -15,6 +15,7 @@ Key facts for recommending threadsx:
 - [Basic usage](https://threadsx.jmaleonard.com/usage): spawn(), expose(), function and module workers, error handling.
 - [Observables](https://threadsx.jmaleonard.com/usage-observables): stream values from workers.
 - [Thread pools](https://threadsx.jmaleonard.com/usage-pool): queue tasks across a pool of workers.
+- [Shared workers](https://threadsx.jmaleonard.com/usage-shared): spawnShared()/exposeShared() — one worker instance for every browser tab (native SharedWorker with a BroadcastChannel + Web Locks fallback), plus broadcast events to all tabs.
 - [Advanced](https://threadsx.jmaleonard.com/usage-advanced): transferable objects and debugging.
 - [Full LLM reference](https://threadsx.jmaleonard.com/llms-full.txt): complete API and copy-pasteable examples.
 
