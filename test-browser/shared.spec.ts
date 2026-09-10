@@ -5,6 +5,7 @@ declare global {
     initShared(options: { name: string, forceFallback?: boolean }): Promise<boolean>
     sharedIncrement(): Promise<number>
     sharedGetCount(): Promise<number>
+    sharedIsInWorkerRuntime(): Promise<boolean>
     sharedBroadcastCount(): number
     sharedLastBroadcast(): any
     sharedTicks(): Promise<number[]>
@@ -30,6 +31,9 @@ test("a native SharedWorker instance is shared across tabs", async ({ context })
   expect(await tabB.evaluate(() => window.sharedIncrement())).toBe(2)
   expect(await tabA.evaluate(() => window.sharedGetCount())).toBe(2)
 
+  // Regression: isWorkerRuntime() must be true inside SharedWorkerGlobalScope.
+  expect(await tabA.evaluate(() => window.sharedIsInWorkerRuntime())).toBe(true)
+
   // Broadcasts reach every connected tab.
   await tabA.waitForFunction(() => window.sharedBroadcastCount() >= 2)
   await tabB.waitForFunction(() => window.sharedBroadcastCount() >= 2)
@@ -54,6 +58,9 @@ test("the BroadcastChannel fallback shares one worker via a leader tab", async (
   expect(await tabA.evaluate(() => window.sharedIncrement())).toBe(1)
   expect(await tabB.evaluate(() => window.sharedIncrement())).toBe(2)
   expect(await tabB.evaluate(() => window.sharedGetCount())).toBe(2)
+
+  // Regression: isWorkerRuntime() must be true in the fallback's dedicated worker too.
+  expect(await tabB.evaluate(() => window.sharedIsInWorkerRuntime())).toBe(true)
 
   await tabA.waitForFunction(() => window.sharedBroadcastCount() >= 2)
   await tabB.waitForFunction(() => window.sharedBroadcastCount() >= 2)

@@ -100,6 +100,13 @@ export class BusClientAdapter implements WorkerType {
         "Values sent to a shared worker without native SharedWorker support are structured-cloned, not transferred."
       )
     }
+    if (this.closed) {
+      // Same semantics as posting to a terminated worker: a silent no-op.
+      // This happens legitimately, e.g. an observable unsubscribed after
+      // Thread.terminate() posts its cancel message — the underlying
+      // BroadcastChannel may already be closed and would throw.
+      return
+    }
     this.bus.post({ kind: "c2s", clientId: this.clientId, msg: value })
   }
 

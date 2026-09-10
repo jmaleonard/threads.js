@@ -42,6 +42,14 @@ function hasFallbackPrerequisites(): boolean {
     typeof globalObject?.navigator?.locks?.request === "function"
 }
 
+// Feature checks alone cannot distinguish Node from a browser anymore:
+// Node ships BroadcastChannel and, since 22.5 (so also 24.x), navigator.locks.
+// A browser window context is what actually makes cross-TAB sharing meaningful.
+function isBrowserWindow(): boolean {
+  return typeof globalObject?.window !== "undefined" &&
+    typeof globalObject?.window?.document !== "undefined"
+}
+
 /**
  * Spawn (or connect to) a shared worker. All tabs of the origin passing the
  * same `name` talk to a single worker instance.
@@ -66,11 +74,17 @@ export async function spawnShared<Exposed extends WorkerFunction | WorkerModule<
   if (!options || !options.name) {
     throw Error("spawnShared() requires options.name — it identifies the shared worker across tabs.")
   }
+  if (!isBrowserWindow()) {
+    throw Error(
+      "spawnShared() is only available in a browser window context — sharing a " +
+      "worker across tabs has no equivalent elsewhere. In Node.js, use spawn() " +
+      "with a regular worker instead."
+    )
+  }
   if (!hasNativeSharedWorker() && !hasFallbackPrerequisites()) {
     throw Error(
-      "spawnShared() is only available in browsers: it needs SharedWorker, or " +
-      "BroadcastChannel plus the Web Locks API for the fallback. " +
-      "In Node.js, use spawn() with a regular worker instead."
+      "spawnShared() needs SharedWorker, or BroadcastChannel plus the Web Locks " +
+      "API for the fallback. This browser provides neither."
     )
   }
 

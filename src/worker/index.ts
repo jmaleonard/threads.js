@@ -38,6 +38,9 @@ function postUncaughtErrorMessage(error: Error) {
  * @param exposed Function or object whose values are functions
  */
 export function expose(exposed: WorkerFunction | WorkerModule<any>) {
+  if (typeof self !== "undefined" && "onconnect" in (self as any)) {
+    throw Error("expose() called in a SharedWorker. Use exposeShared() instead.")
+  }
   if (!Implementation.isWorkerRuntime()) {
     throw Error("expose() called in the master thread.")
   }

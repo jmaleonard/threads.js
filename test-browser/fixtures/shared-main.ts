@@ -23,6 +23,7 @@ const state: { api: any, broadcasts: any[] } = { api: null, broadcasts: [] }
 
 ;(window as any).sharedIncrement = () => state.api.increment()
 ;(window as any).sharedGetCount = () => state.api.getCount()
+;(window as any).sharedIsInWorkerRuntime = () => state.api.isInWorkerRuntime()
 ;(window as any).sharedBroadcastCount = () => state.broadcasts.length
 ;(window as any).sharedLastBroadcast = () => state.broadcasts[state.broadcasts.length - 1]
 

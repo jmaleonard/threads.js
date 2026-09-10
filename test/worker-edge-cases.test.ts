@@ -79,11 +79,28 @@ test("spawnShared() requires a name", async t => {
 })
 
 test("spawnShared() throws a clear error outside the browser", async t => {
-  // Node has neither SharedWorker nor navigator.locks.
+  // Regression: Node ships BroadcastChannel and (since 22.5, so also 24.x)
+  // navigator.locks, so feature-sniffing the fallback prerequisites is not
+  // enough — the guard must require a real browser window context. This test
+  // must pass on Node 24.5+ too, where both globals exist.
   await t.throwsAsync(
     spawnShared(() => null as any, { name: "node-test" }),
-    { message: /only available in browsers/ }
+    { message: /only available in a browser window context/ }
   )
+})
+
+test("the bus adapter ignores messages posted after terminate()", async t => {
+  // Regression: an observable unsubscribed after Thread.terminate() posts its
+  // cancel message through the adapter; the underlying BroadcastChannel is
+  // already closed then and postMessage on it would throw.
+  const { acquireSharedBus } = await import("../src/master/shared/bus")
+  const { BusClientAdapter } = await import("../src/master/shared/bus-adapter")
+
+  const bus = acquireSharedBus("closed-post-test")
+  const adapter = new BusClientAdapter(bus)
+  adapter.terminate()
+
+  t.notThrows(() => adapter.postMessage({ type: "cancel", uid: 1 }))
 })
 
 test("exposeShared() throws outside a worker", t => {

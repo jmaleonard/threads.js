@@ -13,6 +13,7 @@ export default tseslint.config(
       "docs/**",
       "test-tooling/**/dist/**",
       "test-browser/.dist/**",
+      "examples/**/dist/**",
       "playwright-report/**",
       "test-results/**",
       "coverage/**",
