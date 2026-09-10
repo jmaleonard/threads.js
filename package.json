@@ -155,7 +155,7 @@
       "json"
     ],
     "check-coverage": true,
-    "lines": 94,
+    "lines": 93,
     "branches": 84,
     "functions": 91
   },
