@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>threadsx shared worker example</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 480px; margin: 4rem auto; text-align: center; }
+      #count { font-size: 4rem; font-weight: 800; margin: 1rem 0; }
+      button { font-size: 1rem; padding: 0.6rem 1.4rem; margin: 0.25rem; }
+      #status { color: #666; font-size: 0.9rem; }
+      label { display: block; margin: 0.75rem 0; font-size: 0.9rem; color: #444; }
+    </style>
+  </head>
+  <body>
+    <h1>Shared counter</h1>
+    <p>Open this page in several tabs — they all talk to one worker.</p>
+    <div id="count">–</div>
+    <label><input type="checkbox" id="force-fallback" /> Force BroadcastChannel fallback</label>
+    <button id="connect">Connect</button>
+    <button id="increment" disabled>Increment</button>
+    <p id="status">Not connected</p>
+    <script src="./main.js"></script>
+  </body>
+</html>

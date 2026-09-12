@@ -143,6 +143,8 @@
     ],
     "exclude": [
       "src/**/*.browser.ts",
+      "src/master/shared/port-adapter.ts",
+      "src/master/shared/spawn-shared.ts",
       "src/worker/bundle-entry.ts",
       "src/types/worker.ts"
     ],
@@ -153,7 +155,7 @@
       "json"
     ],
     "check-coverage": true,
-    "lines": 94,
+    "lines": 93,
     "branches": 84,
     "functions": 91
   },

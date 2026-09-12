@@ -1,6 +1,6 @@
 import test from "ava"
-import { spawn, Thread, Worker } from "../src/index"
-import { expose } from "../src/worker"
+import { spawn, spawnShared, Thread, Worker } from "../src/index"
+import { expose, exposeShared } from "../src/worker"
 import WorkerThreadsImplementation from "../src/worker/implementation.worker_threads"
 
 test("spawn() rejects when the worker throws asynchronously before init", async t => {
@@ -69,6 +69,45 @@ test("unsubscribing early cancels the job in the worker", async t => {
 
 test("expose() throws when called in the master thread", t => {
   t.throws(() => expose(() => 1), { message: /master thread/ })
+})
+
+test("spawnShared() requires a name", async t => {
+  await t.throwsAsync(
+    spawnShared(() => null as any, undefined as any),
+    { message: /requires options\.name/ }
+  )
+})
+
+test("spawnShared() throws a clear error outside the browser", async t => {
+  // Regression: Node ships BroadcastChannel and (since 22.5, so also 24.x)
+  // navigator.locks, so feature-sniffing the fallback prerequisites is not
+  // enough — the guard must require a real browser window context. This test
+  // must pass on Node 24.5+ too, where both globals exist.
+  await t.throwsAsync(
+    spawnShared(() => null as any, { name: "node-test" }),
+    { message: /only available in a browser window context/ }
+  )
+})
+
+test("the bus adapter ignores messages posted after terminate()", async t => {
+  // Regression: an observable unsubscribed after Thread.terminate() posts its
+  // cancel message through the adapter; the underlying BroadcastChannel is
+  // already closed then and postMessage on it would throw.
+  const { acquireSharedBus } = await import("../src/master/shared/bus")
+  const { BusClientAdapter } = await import("../src/master/shared/bus-adapter")
+
+  const bus = acquireSharedBus("closed-post-test")
+  const adapter = new BusClientAdapter(bus)
+  adapter.terminate()
+
+  t.notThrows(() => adapter.postMessage({ type: "cancel", uid: 1 }))
+})
+
+test("exposeShared() throws outside a worker", t => {
+  t.throws(
+    () => exposeShared(() => 1),
+    { message: /must be called inside a SharedWorker or Worker/ }
+  )
 })
 
 test("worker_threads implementation guards against a missing parent port", t => {

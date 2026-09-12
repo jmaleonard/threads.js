@@ -1,7 +1,7 @@
 export { registerSerializer } from "./common"
-export { ThreadCloneError } from "./errors"
+export { SharedWorkerLeaderLostError, ThreadCloneError } from "./errors"
 export * from "./master/index"
-export { expose } from "./worker/index"
+export { expose, exposeShared } from "./worker/index"
 export { DefaultSerializer, JsonSerializable, Serializer, SerializerImplementation } from "./serializers"
 export { Transfer, TransferDescriptor } from "./transferable"
 export { ExposedToThreadType as ExposedAs } from "./master/spawn";

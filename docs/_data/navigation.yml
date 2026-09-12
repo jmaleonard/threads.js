@@ -19,6 +19,8 @@ sidebar:
         url: /usage-observables
       - title: Thread pools
         url: /usage-pool
+      - title: Shared workers
+        url: /usage-shared
       - title: Advanced
         url: /usage-advanced
       - title: Examples

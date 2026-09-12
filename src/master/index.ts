@@ -5,6 +5,7 @@ import { getWorkerImplementation, isWorkerRuntime } from "./implementation"
 export { FunctionThread, ModuleThread } from "../types/master"
 export { Pool } from "./pool"
 export { spawn } from "./spawn"
+export { spawnShared, SpawnSharedOptions, SharedWorkerFactory } from "./shared/spawn-shared"
 export { Thread } from "./thread"
 export { isWorkerRuntime }
 

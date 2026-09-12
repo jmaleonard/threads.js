@@ -11,8 +11,12 @@ interface WorkerGlobalScope {
 declare const self: WorkerGlobalScope
 
 const isWorkerRuntime: AbstractedWorkerAPI["isWorkerRuntime"] = function isWorkerRuntime() {
-  const isWindowContext = typeof self !== "undefined" && typeof Window !== "undefined" && self instanceof Window
-  return typeof self !== "undefined" && typeof self.postMessage === "function" && !isWindowContext
+  if (typeof self === "undefined") return false
+  // SharedWorkerGlobalScope has no self.postMessage (clients talk through
+  // ports), so detect it by its connect handler instead.
+  if ("onconnect" in (self as any)) return true
+  const isWindowContext = typeof Window !== "undefined" && self instanceof Window
+  return typeof self.postMessage === "function" && !isWindowContext
 }
 
 const postMessageToMaster: AbstractedWorkerAPI["postMessageToMaster"] = function postMessageToMaster(data, transferList?) {

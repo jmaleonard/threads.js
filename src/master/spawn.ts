@@ -19,7 +19,7 @@ import { WorkerInitMessage, WorkerUncaughtErrorMessage } from "../types/messages
 import { WorkerFunction, WorkerModule } from "../types/worker"
 import { createProxyFunction, createProxyModule } from "./invocation-proxy"
 
-type ArbitraryWorkerInterface = WorkerFunction & WorkerModule<string> & { somekeythatisneverusedinproductioncode123: "magicmarker123" }
+export type ArbitraryWorkerInterface = WorkerFunction & WorkerModule<string> & { somekeythatisneverusedinproductioncode123: "magicmarker123" }
 type ArbitraryThreadType = FunctionThread<any, any> & ModuleThread<any>
 
 export type ExposedToThreadType<Exposed extends WorkerFunction | WorkerModule<any>> =

@@ -22,3 +22,6 @@ coverage/
 coverage-browser/
 coverage-merged/
 .nyc_output/
+examples/*/dist/
+examples/*/package-lock.json
+examples/*/package.json
