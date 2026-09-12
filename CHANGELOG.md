@@ -3,6 +3,48 @@
 All notable changes to `threadsx` are documented here. Each release is also
 published on the [releases page](https://github.com/jmaleonard/threadsx/releases).
 
+## v2.3.0
+
+Feature release: share one worker instance across every browser tab. No
+breaking API changes.
+
+### ✨ New: shared workers across tabs
+
+- **`spawnShared()` / `exposeShared()`** connect all tabs of an origin to a
+  single worker — a shared cache, one WebSocket, cross-tab coordination.
+  Native `SharedWorker` where the browser has one; elsewhere (notably Chrome
+  on Android) a tab elected via the Web Locks API owns a dedicated worker and
+  serves the other tabs over a `BroadcastChannel`. The same worker script
+  works on both transports.
+- **`Thread.broadcasts()`** — worker-initiated events (`broadcast(value)`
+  from the worker) delivered to every connected tab; completes on
+  termination like `Thread.events()`.
+- **Per-tab semantics**: `Thread.terminate()` disconnects only the calling
+  tab; observables are per-tab jobs; unsubscribing in one tab cancels only
+  that tab's subscription.
+- **Failover**: if the fallback leader tab closes, another tab respawns the
+  worker; in-flight calls reject with the new `SharedWorkerLeaderLostError`
+  and are never executed twice, calls made afterwards just work.
+- **Liveness**: tabs that die without disconnecting (crash, OOM kill) are
+  pruned by a heartbeat and their jobs canceled; back/forward-cache
+  navigations keep their connection.
+- Startup errors in a native shared worker reject `spawnShared()` with the
+  real error instead of an init timeout. `isWorkerRuntime()` is now true
+  inside `SharedWorkerGlobalScope`.
+- Docs: [shared workers guide](https://threadsx.jmaleonard.com/usage-shared)
+  and a runnable cross-tab example (`examples/browser-shared-tabs`).
+
+### 🧰 Internal
+
+- Multi-tab Playwright specs (native, fallback, failover, startup failure),
+  node-level fallback-stack tests with a Web Locks polyfill, and fake-scope
+  unit tests for both `exposeShared()` runtimes.
+- Node 24 added to the CI test matrix; the suite is verified on Node 20, 22
+  and 24 (including 24.5's `navigator.locks`, which the environment guard
+  now handles correctly).
+- Limitations documented: `Transfer()` is unsupported on the fallback path;
+  worker state does not survive a fallback leader failover.
+
 ## v2.2.0
 
 Reliability and modernization release: the worker-resolution internals lose
