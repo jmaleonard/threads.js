@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -42,7 +42,7 @@ jobs:
       matrix:
         node_version: ['20', '22', '24']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup node ${{ matrix.node_version }}
         uses: actions/setup-node@v4
         with:
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -116,7 +116,7 @@ jobs:
       matrix:
         os: ['windows-latest', 'macos-latest']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup node
         uses: actions/setup-node@v4
         with:
