@@ -81,7 +81,7 @@ jobs:
           path: coverage-merged/lcov.info
           if-no-files-found: warn
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage-merged/lcov.info
           fail_ci_if_error: false
